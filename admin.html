@@ -178,7 +178,7 @@
         <div id="day-list-content"></div>
     </div>
 
-    <script>
+<script>
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
 
@@ -200,6 +200,8 @@
         function renderTimeGrid(currentSchedules, date) {
             const grid = document.getElementById('time-grid');
             const listContent = document.getElementById('day-list-content');
+            if(!grid || !listContent) return;
+
             grid.innerHTML = '';
             listContent.innerHTML = '';
 
@@ -214,12 +216,11 @@
                 btn.style.cursor = "pointer";
                 btn.style.fontWeight = "bold";
 
-                // 수업이 이미 등록되어 있다면 파란색, 아니면 회색
                 if (schedule) {
                     btn.style.background = "#339af0";
                     btn.style.color = "white";
                     if (!schedule.is_available) {
-                        btn.style.background = "#ff6b6b"; // 이미 예약된 경우 빨간색
+                        btn.style.background = "#ff6b6b"; 
                         btn.innerText += " (마감)";
                     }
                 } else {
@@ -241,66 +242,49 @@
 
         async function toggleSchedule(date, time, existingSchedule) {
             if (existingSchedule) {
-                if (!existingSchedule.is_available) return alert("이미 예약된 수업은 관리자라도 마음대로 끌 수 없습니다. 예약을 먼저 취소하세요.");
-
-                // 활성화된 수업 클릭 시 삭제 (비활성화)
+                if (!existingSchedule.is_available) return alert("이미 예약된 수업은 취소를 먼저 하세요.");
                 await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?id=eq.${existingSchedule.id}`, {
                     method: 'DELETE',
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
             } else {
-                // 비활성화된 수업 클릭 시 생성 (활성화)
                 await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules`, {
                     method: 'POST',
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ lesson_date: date, lesson_time: time, is_available: true })
                 });
             }
-            fetchDaySchedules(); // 즉시 새로고침
+            fetchDaySchedules(); 
         }
+
         let adminCurrentDate = new Date();
         let allReservations = [];
 
         async function loadAdminDashboard() {
             try {
-                // 1. 예약 데이터만 깔끔하게 가져옵니다.
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*`, {
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
-
-                if (!res.ok) {
-                    const errorDetail = await res.json();
-                    console.error("서버 응답 에러:", errorDetail);
-                    throw new Error("데이터 로드 실패");
-                }
-
+                if (!res.ok) throw new Error("데이터 로드 실패");
                 allReservations = await res.json();
-                console.log("가져온 예약 데이터:", allReservations);
-
-                // 2. 일단 이름 조인 없이 바로 달력을 그립니다.
                 renderAdminCalendar();
             } catch (err) {
-                console.error("대시보드 로드 에러:", err);
+                console.error("대시보드 에러:", err);
                 allReservations = [];
-                renderAdminCalendar(); // 빈 배열이라도 그려서 에러를 막습니다.
+                renderAdminCalendar();
             }
         }
 
         function renderAdminCalendar() {
             const grid = document.getElementById('admin-calendar-grid');
             const monthText = document.getElementById('admin-current-month');
-            if (!grid) return;
+            if (!grid || !monthText) return;
 
-            grid.innerHTML = ''; // 초기화
-
+            grid.innerHTML = '';
             const year = adminCurrentDate.getFullYear();
             const month = adminCurrentDate.getMonth();
             monthText.innerText = `${year}년 ${month + 1}월`;
 
-            // [1] 요일 헤더 추가 (일~토)
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             days.forEach(d => {
                 const header = document.createElement('div');
@@ -312,53 +296,40 @@
             const firstDay = new Date(year, month, 1).getDay();
             const lastDate = new Date(year, month + 1, 0).getDate();
 
-            // [2] 빈 칸 채우기
             for (let i = 0; i < firstDay; i++) {
                 grid.appendChild(document.createElement('div'));
             }
 
-            // (날짜 생성 반복문 내부 코드)
             for (let d = 1; d <= lastDate; d++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
-
-                // 날짜 표시
                 dayDiv.innerHTML = `<div class="day-number">${d}</div>`;
 
                 const dayRes = allReservations.filter(r => r.lesson_date === dateStr);
-
-                // [중요] 예약 시간이 빠른 순서대로 정렬
                 dayRes.sort((a, b) => a.lesson_time.localeCompare(b.lesson_time));
 
                 dayRes.forEach(res => {
                     const badge = document.createElement('div');
                     badge.className = 'admin-res-badge';
-
-                    // 학생 이름(student_name)이 없으면 ID라도 표시
                     const displayName = res.student_name || `ID:${res.student_id}`;
-
-                    badge.innerHTML = `
-                <span class="res-time">${res.lesson_time}</span>
-                <span>${displayName}</span>
-            `;
+                    badge.innerHTML = `<span class="res-time">${res.lesson_time}</span> <span>${displayName}</span>`;
                     dayDiv.appendChild(badge);
                 });
-
                 grid.appendChild(dayDiv);
             }
+        } // <--- renderAdminCalendar 함수가 여기서 정확히 닫혀야 합니다.
 
-            function changeAdminMonth(offset) {
-                adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
-                loadAdminDashboard(); // 달을 이동할 때마다 데이터를 새로 불러옵니다
-            }
+        function changeAdminMonth(offset) {
+            adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
+            loadAdminDashboard();
+        }
 
-            // 마지막으로 페이지 로드 시 실행되도록 추가
-            window.addEventListener('load', () => {
-                loadAdminDashboard();
-            });
-        }); 
-    </script> ```
+        window.addEventListener('load', () => {
+            loadAdminDashboard();
+        });
+    </script>
+
     <div class="container">
         <div class="card">
             <h2>📅 수업 시간표 개설</h2>
