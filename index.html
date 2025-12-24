@@ -105,7 +105,7 @@
             const remaining = currentUser.total_slots - usedCount;
             
             document.getElementById('welcome-name').innerText = `안녕하세요, ${currentUser.Name}님!`;
-           document.getElementById('month-usage').innerText = `${month + 1}월 예약 가능 횟수: 총 ${remaining}회 남음`;
+            document.getElementById('month-usage').innerText = `${month + 1}월 예약 가능 횟수: 총 ${remaining}회 남음`;
             document.getElementById('current-month-label').innerText = `${year}년 ${month + 1}월`;
 
             renderCalendar(reservations);
