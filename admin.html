@@ -210,12 +210,32 @@
         let allReservations = [];
 
         async function loadAdminDashboard() {
-            // 학생 이름(name)을 같이 가져오기 위해 조인(join) 쿼리를 사용합니다
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*,Students(name)`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-            });
-            allReservations = await res.json();
-            renderAdminCalendar();
+            try {
+                // 1. 예약 데이터만 먼저 가져옵니다 (에러 방지를 위해 조인 제거)
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+
+                if (!res.ok) throw new Error("데이터 로드 실패");
+                allReservations = await res.json();
+
+                // 2. 학생 정보도 따로 가져옵니다
+                const studentRes = await fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,name`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                const students = await studentRes.json();
+
+                // 3. 예약 데이터에 학생 이름을 매칭합니다
+                allReservations = allReservations.map(res => {
+                    const student = students.find(s => s.id === res.student_id);
+                    return { ...res, student_name: student ? student.name : "미등록" };
+                });
+
+                renderAdminCalendar();
+            } catch (err) {
+                console.error("대시보드 로드 에러:", err);
+                allReservations = []; // 에러 시 빈 배열로 초기화하여 filter 에러 방지
+            }
         }
 
         function renderAdminCalendar() {
@@ -246,11 +266,10 @@
 
                 const dayRes = allReservations.filter(r => r.lesson_date === dateStr);
                 dayRes.forEach(res => {
-                    const studentName = res.Students ? res.Students.name : "미등록";
                     const badge = document.createElement('div');
-                    // 관리자가 보기 편하도록 시간과 이름을 강조한 스타일
-                    badge.style = "background:#f1f3f5; color:#495057; font-size:11px; padding:3px; margin-top:3px; border-radius:4px; border-left:3px solid #339af0; text-align:left;";
-                    badge.innerText = `${res.lesson_time}\n${studentName}`;
+                    badge.className = 'admin-res-badge';
+                    // res.Students.name 대신 res.student_name 사용
+                    badge.innerText = `${res.lesson_time} ${res.student_name}`;
                     dayDiv.appendChild(badge);
                 });
 
