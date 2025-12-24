@@ -104,6 +104,50 @@
             width: auto;
             margin: 0;
         }
+
+        /* 달력 전체 틀 */
+        #admin-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            /* 7열로 나눔 */
+            gap: 2px;
+            background-color: #eee;
+            /* 선 색상 */
+            border: 1px solid #eee;
+            margin-top: 20px;
+        }
+
+        /* 날짜 칸 하나하나 */
+        .calendar-day {
+            background-color: #fff;
+            min-height: 100px;
+            /* 칸 높이 */
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        /* 요일 헤더 (일~토) */
+        .calendar-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* 예약 정보 뱃지 */
+        .admin-res-badge {
+            background: #e7f5ff;
+            color: #1c7ed6;
+            font-size: 11px;
+            padding: 3px;
+            margin-top: 3px;
+            border-radius: 4px;
+            border-left: 3px solid #339af0;
+            text-align: left;
+            word-break: break-all;
+            /* 긴 이름 줄바꿈 */
+        }
     </style>
 </head>
 
@@ -240,35 +284,44 @@
         function renderAdminCalendar() {
             const grid = document.getElementById('admin-calendar-grid');
             const monthText = document.getElementById('admin-current-month');
-            if (!grid || !monthText) return;
+            if (!grid) return;
 
-            grid.innerHTML = '';
+            grid.innerHTML = ''; // 초기화
+
             const year = adminCurrentDate.getFullYear();
             const month = adminCurrentDate.getMonth();
             monthText.innerText = `${year}년 ${month + 1}월`;
 
+            // [1] 요일 헤더 추가 (일~토)
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            days.forEach(d => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.innerText = d;
+                grid.appendChild(header);
+            });
+
             const firstDay = new Date(year, month, 1).getDay();
             const lastDate = new Date(year, month + 1, 0).getDate();
 
-            // 빈 칸 생성
+            // [2] 빈 칸 채우기
             for (let i = 0; i < firstDay; i++) {
                 grid.appendChild(document.createElement('div'));
             }
 
-            // 날짜별 예약 정보 표시
+            // [3] 날짜 및 예약 데이터 표시
             for (let d = 1; d <= lastDate; d++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
-                dayDiv.style = "min-height:80px; border:1px solid #eee; padding:5px; background:white;";
-                dayDiv.innerHTML = `<div style="font-weight:bold;">${d}</div>`;
+                dayDiv.innerHTML = `<div style="font-weight:bold; margin-bottom:5px;">${d}</div>`;
 
                 const dayRes = allReservations.filter(r => r.lesson_date === dateStr);
                 dayRes.forEach(res => {
                     const badge = document.createElement('div');
                     badge.className = 'admin-res-badge';
-                    // 학생 이름 대신 예약된 시간을 먼저 보여줍니다.
-                    badge.innerText = `${res.lesson_time} (ID:${res.student_id})`;
+                    // 학생 이름(student_name)이 있다면 표시, 없으면 ID 표시
+                    badge.innerText = `${res.lesson_time} ${res.student_name || 'ID:' + res.student_id}`;
                     dayDiv.appendChild(badge);
                 });
 
