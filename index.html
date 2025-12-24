@@ -303,7 +303,8 @@
                 div.innerHTML = `<span class="day-num">${d}</span>`;
 
                 if (myRes) {
-                    div.innerHTML += `<span class="res-badge res-mine">내 예약</span>`;
+                    // [수정] 뱃지에 예약 시간을 추가하여 표시합니다.
+                    div.innerHTML += `<span class="res-badge res-mine">${myRes.lesson_time} 예약</span>`;
                     div.innerHTML += `<span class="cancel-link" onclick="event.stopPropagation(); cancelReservation('${myRes.id}')">취소하기</span>`;
                 } else if (hasBookingInThisWeek) {
                     div.classList.add('week-blocked');
