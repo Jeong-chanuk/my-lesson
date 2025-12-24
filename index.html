@@ -2,46 +2,37 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>수업 예약 테스트 - 집</title>
+    <title>수업 예약 시스템 - 최종</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; line-height: 1.6; }
         .slot { 
-            padding: 15px; margin: 10px; border-radius: 8px;
-            border: 1px solid #ddd; display: inline-block; 
-            cursor: pointer; transition: 0.3s;
+            padding: 20px; margin: 10px; border-radius: 12px;
+            border: 2px solid #eee; display: inline-block; min-width: 150px;
+            text-align: center; cursor: pointer; transition: 0.3s;
         }
-        .booked { background-color: #ffcccc; cursor: not-allowed; color: #666; }
-        .available { background-color: #ccffcc; font-weight: bold; }
-        .available:hover { background-color: #b3ffb3; transform: scale(1.05); }
+        .booked { background-color: #ffe5e5; border-color: #ffcccc; color: #ff4d4d; cursor: not-allowed; }
+        .available { background-color: #e5f9ff; border-color: #cceeff; color: #0077aa; font-weight: bold; }
+        .available:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .student-name { display: block; font-size: 0.8em; color: #666; margin-top: 5px; }
     </style>
 </head>
 <body>
-    <h1>📅 현재 예약 현황 (Home)</h1>
-    <p>원하는 시간대를 클릭하여 예약해보세요.</p>
+    <h1>📅 수업 예약 현황</h1>
+    <p>원하는 시간대를 클릭하여 성함을 입력해주세요.</p>
     <div id="lesson-list">데이터를 불러오는 중...</div>
 
     <script>
-        // 1. 기존에 사용하던 본인의 URL과 KEY를 넣어주세요!
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD'; 
 
-        // 2. 백엔드(MyClass 테이블)에서 데이터 가져오기
         async function fetchLessons() {
-            try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?select=*`, {
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
-                });
-                const lessons = await response.json();
-                displayLessons(lessons);
-            } catch (error) {
-                console.error("데이터 로드 실패:", error);
-            }
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?select=*`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            const lessons = await response.json();
+            displayLessons(lessons);
         }
 
-        // 3. 화면에 그리기
         function displayLessons(lessons) {
             const listDiv = document.getElementById('lesson-list');
             listDiv.innerHTML = '';
@@ -50,32 +41,37 @@
             lessons.forEach(lesson => {
                 const div = document.createElement('div');
                 div.className = `slot ${lesson.is_booked ? 'booked' : 'available'}`;
-                div.innerText = `${lesson.time} - ${lesson.is_booked ? '예약완료' : '예약가능'}`;
                 
-                if (!lesson.is_booked) {
-                    div.onclick = () => bookLesson(lesson.id);
+                let content = `<strong>${lesson.time}</strong><br>`;
+                content += lesson.is_booked ? '예약완료' : '예약가능';
+                
+                // 예약된 경우 이름 표시 (데이터가 있을 때만)
+                if (lesson.is_booked && lesson.student_name) {
+                    content += `<span class="student-name">(${lesson.student_name}님)</span>`;
                 }
+                
+                div.innerHTML = content;
+                if (!lesson.is_booked) div.onclick = () => bookLesson(lesson.id, lesson.time);
                 listDiv.appendChild(div);
             });
         }
 
-        // 4. 예약 업데이트
-        async function bookLesson(id) {
-            if (!confirm("이 시간으로 예약하시겠습니까?")) return;
+        async function bookLesson(id, time) {
+            const name = prompt(`${time} 예약을 위해 성함을 입력해주세요:`);
+            if (!name || name.trim() === "") return;
 
             const response = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?id=eq.${id}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': SUPABASE_KEY,
                     'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ is_booked: true })
+                body: JSON.stringify({ is_booked: true, student_name: name })
             });
 
             if (response.ok) {
-                alert("예약되었습니다!");
+                alert(`${name}님, ${time} 예약이 완료되었습니다!`);
                 fetchLessons();
             }
         }
