@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>수업 예약 테스트 - 집</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .slot { 
+            padding: 15px; margin: 10px; border-radius: 8px;
+            border: 1px solid #ddd; display: inline-block; 
+            cursor: pointer; transition: 0.3s;
+        }
+        .booked { background-color: #ffcccc; cursor: not-allowed; color: #666; }
+        .available { background-color: #ccffcc; font-weight: bold; }
+        .available:hover { background-color: #b3ffb3; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <h1>📅 현재 예약 현황 (Home)</h1>
+    <p>원하는 시간대를 클릭하여 예약해보세요.</p>
+    <div id="lesson-list">데이터를 불러오는 중...</div>
+
+    <script>
+        // 1. 기존에 사용하던 본인의 URL과 KEY를 넣어주세요!
+        const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD'; 
+
+        // 2. 백엔드(MyClass 테이블)에서 데이터 가져오기
+        async function fetchLessons() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                const lessons = await response.json();
+                displayLessons(lessons);
+            } catch (error) {
+                console.error("데이터 로드 실패:", error);
+            }
+        }
+
+        // 3. 화면에 그리기
+        function displayLessons(lessons) {
+            const listDiv = document.getElementById('lesson-list');
+            listDiv.innerHTML = '';
+            lessons.sort((a, b) => a.id - b.id);
+
+            lessons.forEach(lesson => {
+                const div = document.createElement('div');
+                div.className = `slot ${lesson.is_booked ? 'booked' : 'available'}`;
+                div.innerText = `${lesson.time} - ${lesson.is_booked ? '예약완료' : '예약가능'}`;
+                
+                if (!lesson.is_booked) {
+                    div.onclick = () => bookLesson(lesson.id);
+                }
+                listDiv.appendChild(div);
+            });
+        }
+
+        // 4. 예약 업데이트
+        async function bookLesson(id) {
+            if (!confirm("이 시간으로 예약하시겠습니까?")) return;
+
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ is_booked: true })
+            });
+
+            if (response.ok) {
+                alert("예약되었습니다!");
+                fetchLessons();
+            }
+        }
+
+        fetchLessons();
+    </script>
+</body>
+</html>
