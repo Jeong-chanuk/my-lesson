@@ -213,6 +213,7 @@
 
         let currentUser = null;
         let currentDate = new Date(); // 현재 보고 있는 달력 기준일
+        let reservations = []; // [중요] 예약 데이터를 담을 빈 배열을 미리 선언합니다.
 
         async function handleLogin() {
             const name = document.getElementById('user-name').value;
