@@ -206,7 +206,91 @@
             }
             fetchDaySchedules(); // 즉시 새로고침
         }
+        let adminCurrentDate = new Date();
+        let allReservations = [];
+
+        async function loadAdminDashboard() {
+            // 학생 이름(name)을 같이 가져오기 위해 조인(join) 쿼리를 사용합니다
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*,Students(name)`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            allReservations = await res.json();
+            renderAdminCalendar();
+        }
+
+        function renderAdminCalendar() {
+            const grid = document.getElementById('admin-calendar-grid');
+            const monthText = document.getElementById('admin-current-month');
+            if (!grid || !monthText) return;
+
+            grid.innerHTML = '';
+            const year = adminCurrentDate.getFullYear();
+            const month = adminCurrentDate.getMonth();
+            monthText.innerText = `${year}년 ${month + 1}월`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            // 빈 칸 생성
+            for (let i = 0; i < firstDay; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            // 날짜별 예약 정보 표시
+            for (let d = 1; d <= lastDate; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+                dayDiv.style = "min-height:80px; border:1px solid #eee; padding:5px; background:white;";
+                dayDiv.innerHTML = `<div style="font-weight:bold;">${d}</div>`;
+
+                const dayRes = allReservations.filter(r => r.lesson_date === dateStr);
+                dayRes.forEach(res => {
+                    const studentName = res.Students ? res.Students.name : "미등록";
+                    const badge = document.createElement('div');
+                    // 관리자가 보기 편하도록 시간과 이름을 강조한 스타일
+                    badge.style = "background:#f1f3f5; color:#495057; font-size:11px; padding:3px; margin-top:3px; border-radius:4px; border-left:3px solid #339af0; text-align:left;";
+                    badge.innerText = `${res.lesson_time}\n${studentName}`;
+                    dayDiv.appendChild(badge);
+                });
+
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        function changeAdminMonth(offset) {
+            adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
+            loadAdminDashboard(); // 달을 이동할 때마다 데이터를 새로 불러옵니다
+        }
+
+        // 마지막으로 페이지 로드 시 실행되도록 추가
+        window.addEventListener('load', () => {
+            loadAdminDashboard();
+        });
     </script>
+    <div class="container">
+        <div class="card">
+            <h2>📅 수업 시간표 개설</h2>
+        </div>
+    </div>
+
+    <div class="container" style="margin-top: 30px; max-width: 1000px;">
+        <div class="card">
+            <h2>📅 전체 수업 및 예약 현황</h2>
+            <div id="admin-calendar-header"
+                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <button onclick="changeAdminMonth(-1)">◀</button>
+                <h3 id="admin-current-month">2025년 12월</h3>
+                <button onclick="changeAdminMonth(1)">▶</button>
+            </div>
+            <div id="admin-calendar-grid" class="calendar-grid">
+            </div>
+        </div>
+    </div>
+
+    <div class="container" style="margin-top: 20px;">
+        <div id="schedule-list"></div>
+    </div>
 </body>
 
 </html>
