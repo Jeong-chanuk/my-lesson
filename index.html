@@ -18,7 +18,7 @@
         .time-text { font-size: 1.2em; font-weight: bold; display: block; margin-bottom: 5px; }
         .available .time-text { color: var(--blue); }
         .booked .time-text { color: var(--red); }
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
         .available .badge { background: #e7f5ff; color: #1971c2; }
         .booked .badge { background: #ffe3e3; color: #c92a2a; }
         .user-name { display: block; margin-top: 8px; font-size: 13px; font-weight: bold; }
@@ -32,17 +32,22 @@
     <div id="lesson-list">데이터를 불러오는 중...</div>
 
     <script>
+        // 선생님의 실제 URL과 KEY로 유지해주세요!
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD'; 
 
         // 1. 수업 목록 가져오기
         async function fetchLessons() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?select=*`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-            });
-            const data = await res.json();
-            data.sort((a, b) => a.id - b.id);
-            render(data);
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?select=*`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                const data = await res.json();
+                data.sort((a, b) => a.id - b.id);
+                render(data);
+            } catch (err) {
+                console.error("수업 정보를 가져오는데 실패했습니다:", err);
+            }
         }
 
         function render(lessons) {
@@ -61,47 +66,65 @@
             });
         }
 
-        // 2. 예약 로직 (학생 체크 포함)
+        // 2. 예약 로직 (대소문자 수정 및 에러 방지 강화)
         async function handleBooking(lessonId, time) {
             const name = prompt("등록된 성함을 입력해주세요:");
             if (!name) return;
 
-            // [A] 학생 정보 조회
-            const studentRes = await fetch(`${SUPABASE_URL}/rest/v1/Students?name=eq.${name}&select=*`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-            });
-            const students = await studentRes.json();
+            try {
+                // [수정] 테이블 이름을 Students(대문자)로 변경했습니다.
+                const studentRes = await fetch(`${SUPABASE_URL}/rest/v1/Students?name=eq.${name}&select=*`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                
+                if (!studentRes.ok) throw new Error("학생 정보 조회 실패");
+                
+                const students = await studentRes.json();
 
-            if (students.length === 0) {
-                alert("등록되지 않은 이름입니다. 선생님께 문의하세요.");
-                return;
-            }
+                if (students.length === 0) {
+                    alert(`'${name}'님은 등록되지 않은 이름입니다. Students 테이블의 이름과 정확히 일치하는지 확인해주세요.`);
+                    return;
+                }
 
-            const student = students[0];
-            const remaining = student.total_slots - student.used_slots;
+                const student = students[0];
+                const total = Number(student.total_slots);
+                const used = Number(student.used_slots);
+                const remaining = total - used;
 
-            if (remaining <= 0) {
-                alert(`${name}님, 이번 달 예약 가능 횟수(${student.total_slots}회)를 모두 사용하셨습니다.`);
-                return;
-            }
+                if (remaining <= 0) {
+                    alert(`${name}님, 이번 달 예약 가능 횟수(${total}회)를 모두 사용하셨습니다.`);
+                    return;
+                }
 
-            // [B] 예약 진행 (MyClass 테이블 업데이트)
-            const bookRes = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?id=eq.${lessonId}`, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_booked: true, student_name: name })
-            });
-
-            if (bookRes.ok) {
-                // [C] 학생 사용 횟수 차감 (Students 테이블 업데이트)
-                await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${student.id}`, {
+                // 예약 진행 (MyClass 업데이트)
+                const bookRes = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?id=eq.${lessonId}`, {
                     method: 'PATCH',
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ used_slots: student.used_slots + 1 })
+                    headers: { 
+                        'apikey': SUPABASE_KEY, 
+                        'Authorization': `Bearer ${SUPABASE_KEY}`, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ is_booked: true, student_name: name })
                 });
 
-                alert(`${name}님 예약 완료! (남은 횟수: ${remaining - 1}회)`);
-                fetchLessons();
+                if (bookRes.ok) {
+                    // 학생 사용 횟수 차감 (Students 업데이트)
+                    await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${student.id}`, {
+                        method: 'PATCH',
+                        headers: { 
+                            'apikey': SUPABASE_KEY, 
+                            'Authorization': `Bearer ${SUPABASE_KEY}`, 
+                            'Content-Type': 'application/json' 
+                        },
+                        body: JSON.stringify({ used_slots: used + 1 })
+                    });
+
+                    alert(`${name}님 예약 완료! (남은 횟수: ${remaining - 1}회)`);
+                    fetchLessons();
+                }
+            } catch (err) {
+                console.error("예약 과정에서 에러 발생:", err);
+                alert("예약 처리 중 오류가 발생했습니다. 콘솔 창을 확인해주세요.");
             }
         }
 
