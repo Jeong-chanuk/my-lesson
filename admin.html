@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수업 관리자 모드</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --blue: #339af0; --red: #ff6b6b; --gray: #f8f9fa; }
+        body { font-family: 'Noto Sans KR', sans-serif; background: var(--gray); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .admin-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); width: 100%; max-width: 500px; }
+        h2 { margin-top: 0; color: var(--blue); }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: var(--blue); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        .schedule-list { margin-top: 30px; width: 100%; max-width: 500px; }
+        .schedule-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .status-on { color: var(--blue); font-weight: bold; }
+        .status-off { color: #aaa; text-decoration: line-through; }
+        .del-btn { background: var(--red); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; width: auto; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-card">
+        <h2>📅 수업 시간표 개설</h2>
+        <div class="input-group">
+            <label>날짜 선택</label>
+            <input type="date" id="lesson-date">
+        </div>
+        <div class="input-group">
+            <label>시간 입력 (예: 14:00)</label>
+            <input type="text" id="lesson-time" placeholder="HH:MM">
+        </div>
+        <button onclick="createSchedule()">수업 오픈하기</button>
+    </div>
+
+    <div class="schedule-list" id="schedule-list">
+        <h3 id="list-title">열려 있는 수업 목록</h3>
+        </div>
+
+    <script>
+        const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD'; 
+
+        // 1. 수업 개설 함수
+        async function createSchedule() {
+            const date = document.getElementById('lesson-date').value;
+            const time = document.getElementById('lesson-time').value;
+
+            if(!date || !time) return alert("날짜와 시간을 입력하세요.");
+
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules`, {
+                method: 'POST',
+                headers: { 
+                    'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({
+                    lesson_date: date,
+                    lesson_time: time,
+                    is_available: true
+                })
+            });
+
+            if (res.ok) {
+                alert("수업이 성공적으로 개설되었습니다!");
+                fetchSchedules();
+            }
+        }
+
+        // 2. 개설된 수업 목록 가져오기
+        async function fetchSchedules() {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?order=lesson_date.asc,lesson_time.asc`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            const data = await res.json();
+            renderSchedules(data);
+        }
+
+        function renderSchedules(data) {
+            const list = document.getElementById('schedule-list');
+            list.innerHTML = '<h3>열려 있는 수업 목록</h3>';
+
+            data.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'schedule-item';
+                div.innerHTML = `
+                    <div>
+                        <strong>${s.lesson_date}</strong> | ${s.lesson_time} 
+                        <span class="${s.is_available ? 'status-on' : 'status-off'}">
+                            (${s.is_available ? '예약가능' : '마감'})
+                        </span>
+                    </div>
+                    <button class="del-btn" onclick="deleteSchedule('${s.id}')">삭제</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // 3. 수업 삭제 함수
+        async function deleteSchedule(id) {
+            if(!confirm("이 수업 시간을 아예 삭제하시겠습니까?")) return;
+
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+
+            if (res.ok) {
+                fetchSchedules();
+            }
+        }
+
+        // 초기 로드
+        fetchSchedules();
+    </script>
+</body>
+</html>

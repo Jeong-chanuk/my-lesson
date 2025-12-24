@@ -1,40 +1,174 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>스마트 월간 예약 시스템</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f8f9fa; --blue: #339af0; --red: #ff6b6b; --green: #51cf66; --dark: #343a40; }
-        body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--dark); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        
-        #login-section { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; width: 100%; max-width: 350px; margin-top: 50px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-        #login-btn { width: 100%; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        :root {
+            --bg: #f8f9fa;
+            --blue: #339af0;
+            --red: #ff6b6b;
+            --green: #51cf66;
+            --dark: #343a40;
+        }
 
-        #main-dashboard { display: none; width: 100%; max-width: 800px; }
-        .header-card { background: white; padding: 20px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #login-section {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            width: 100%;
+            max-width: 350px;
+            margin-top: 50px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        #login-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #main-dashboard {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .header-card {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         /* 달력 스타일 */
-        .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; width: 100%; }
-        .day-header { text-align: center; font-weight: bold; font-size: 13px; color: #888; padding: 10px 0; }
-        .day { background: white; min-height: 100px; border-radius: 12px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); border: 2px solid transparent; transition: 0.2s; cursor: pointer; position: relative; }
-        .day:hover:not(.empty) { border-color: var(--blue); transform: translateY(-3px); }
-        .day.empty { background: none; box-shadow: none; cursor: default; }
-        .day.today { border-color: var(--blue); background: #e7f5ff; }
-        .day-num { font-weight: bold; margin-bottom: 5px; display: block; }
-        
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            width: 100%;
+        }
+
+        .day-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            color: #888;
+            padding: 10px 0;
+        }
+
+        .day {
+            background: white;
+            min-height: 100px;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+            border: 2px solid transparent;
+            transition: 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .day:hover:not(.empty) {
+            border-color: var(--blue);
+            transform: translateY(-3px);
+        }
+
+        .day.empty {
+            background: none;
+            box-shadow: none;
+            cursor: default;
+        }
+
+        .day.today {
+            border-color: var(--blue);
+            background: #e7f5ff;
+        }
+
+        .day-num {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+        }
+
         /* 예약 뱃지 */
-        .res-badge { font-size: 10px; padding: 3px 6px; border-radius: 5px; display: block; margin-top: 4px; text-align: center; }
-        .res-mine { background: var(--green); color: white; }
-        .res-others { background: #eee; color: #888; }
-        .week-blocked { background: #fff5f5; opacity: 0.6; cursor: not-allowed; }
-        
-        .cancel-link { font-size: 10px; color: var(--red); text-decoration: underline; cursor: pointer; display: block; margin-top: 5px; }
+        .res-badge {
+            font-size: 10px;
+            padding: 3px 6px;
+            border-radius: 5px;
+            display: block;
+            margin-top: 4px;
+            text-align: center;
+        }
+
+        .res-mine {
+            background: var(--green);
+            color: white;
+        }
+
+        .res-others {
+            background: #eee;
+            color: #888;
+        }
+
+        .week-blocked {
+            background: #fff5f5;
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .cancel-link {
+            font-size: 10px;
+            color: var(--red);
+            text-decoration: underline;
+            cursor: pointer;
+            display: block;
+            margin-top: 5px;
+        }
     </style>
 </head>
+
 <body>
 
     <div id="login-section">
@@ -50,24 +184,32 @@
                 <h2 id="welcome-name" style="margin:0;">안녕하세요!</h2>
                 <p id="month-usage" style="margin:5px 0 0; color:#666; font-size:14px;"></p>
             </div>
-            <button onclick="location.reload()" style="background:none; border:none; color:#aaa; cursor:pointer; text-decoration:underline;">로그아웃</button>
+            <button onclick="location.reload()"
+                style="background:none; border:none; color:#aaa; cursor:pointer; text-decoration:underline;">로그아웃</button>
         </div>
 
         <div class="calendar-nav">
-            <button onclick="changeMonth(-1)" style="border:none; background:none; cursor:pointer; font-size:20px;">◀</button>
+            <button onclick="changeMonth(-1)"
+                style="border:none; background:none; cursor:pointer; font-size:20px;">◀</button>
             <h2 id="current-month-label" style="margin:0;">2024년 10월</h2>
-            <button onclick="changeMonth(1)" style="border:none; background:none; cursor:pointer; font-size:20px;">▶</button>
+            <button onclick="changeMonth(1)"
+                style="border:none; background:none; cursor:pointer; font-size:20px;">▶</button>
         </div>
 
         <div class="calendar-grid" id="calendar-grid">
-            <div class="day-header">일</div><div class="day-header">월</div><div class="day-header">화</div>
-            <div class="day-header">수</div><div class="day-header">목</div><div class="day-header">금</div><div class="day-header">토</div>
+            <div class="day-header">일</div>
+            <div class="day-header">월</div>
+            <div class="day-header">화</div>
+            <div class="day-header">수</div>
+            <div class="day-header">목</div>
+            <div class="day-header">금</div>
+            <div class="day-header">토</div>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co'; 
-        const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD'; 
+        const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
 
         let currentUser = null;
         let currentDate = new Date(); // 현재 보고 있는 달력 기준일
@@ -79,7 +221,7 @@
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
             });
             const data = await res.json();
-            if(data.length > 0) {
+            if (data.length > 0) {
                 currentUser = data[0];
                 document.getElementById('login-section').style.display = 'none';
                 document.getElementById('main-dashboard').style.display = 'block';
@@ -103,7 +245,7 @@
             const myMonthlyRes = reservations.filter(r => r.student_id === currentUser.id);
             const usedCount = myMonthlyRes.length;
             const remaining = currentUser.total_slots - usedCount;
-            
+
             document.getElementById('welcome-name').innerText = `안녕하세요, ${currentUser.Name}님!`;
             document.getElementById('month-usage').innerText = `${month + 1}월 예약 가능 횟수: 총 ${remaining}회 남음`;
             document.getElementById('current-month-label').innerText = `${year}년 ${month + 1}월`;
@@ -134,19 +276,19 @@
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const div = document.createElement('div');
                 div.className = 'day';
-                
+
                 // 오늘 표시
                 const today = new Date();
-                if(year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) div.classList.add('today');
+                if (year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) div.classList.add('today');
 
                 // 해당 날짜 예약 확인
                 const dayRes = reservations.filter(r => r.lesson_date === dateStr);
                 const myRes = dayRes.find(r => r.student_id === currentUser.id);
-                
+
                 // 주차 계산 (같은 주에 예약 있는지 확인)
                 const weekNum = getWeekOfMonth(new Date(year, month, d));
-                const hasBookingInThisWeek = reservations.some(r => 
-                    r.student_id === currentUser.id && 
+                const hasBookingInThisWeek = reservations.some(r =>
+                    r.student_id === currentUser.id &&
                     getWeekOfMonth(new Date(r.lesson_date)) === weekNum &&
                     new Date(r.lesson_date).getMonth() === month
                 );
@@ -162,31 +304,76 @@
                     div.classList.add('week-blocked');
                     div.innerHTML += `<span class="res-badge" style="color:#ff8787">주1회 완료</span>`;
                 } else {
-                    div.onclick = () => makeReservation(dateStr);
+                    div.onclick = () => openTimePicker(dateStr);
                 }
 
                 grid.appendChild(div);
             }
         }
 
-        async function makeReservation(date) {
-            if (!confirm(`${date}일로 예약하시겠습니까?`)) return;
+        // [단계 1] 날짜 클릭 시 관리자가 개설한 시간을 먼저 확인
+        async function openTimePicker(date) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?lesson_date=eq.${date}&is_available=eq.true&select=*`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            const availableTimes = await res.json();
 
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations`, {
+            if (availableTimes.length === 0) {
+                alert("선생님이 아직 이 날짜에 수업을 개설하지 않으셨거나 이미 마감되었습니다.");
+                return;
+            }
+
+            // 학생에게 가능한 시간 목록을 보여주고 선택받음
+            const timeList = availableTimes.map(t => t.lesson_time).join(", ");
+            const selectedTime = prompt(`예약할 시간을 입력하세요\n(가능한 시간: ${timeList})`);
+
+            const classInfo = availableTimes.find(t => t.lesson_time === selectedTime);
+            if (!classInfo) {
+                if (selectedTime) alert("목록에 있는 시간만 입력해주세요.");
+                return;
+            }
+
+            // 선택이 완료되면 실제 예약 프로세스로 넘김
+            processReservation(date, selectedTime, classInfo.id);
+        }
+
+        // [단계 2] 실제 예약 기록 (주차 체크 로직 포함)
+        async function processReservation(date, time, scheduleId) {
+            const selectedDate = new Date(date);
+            const selectedWeek = getWeekOfMonth(selectedDate);
+            const selectedMonth = selectedDate.getMonth();
+
+            // 주당 제한 횟수 체크
+            const myResInWeek = reservations.filter(r =>
+                r.student_id === currentUser.id &&
+                new Date(r.lesson_date).getMonth() === selectedMonth &&
+                getWeekOfMonth(new Date(r.lesson_date)) === selectedWeek
+            ).length;
+
+            if (myResInWeek >= (currentUser.weekly_limit || 1)) {
+                alert(`주 ${currentUser.weekly_limit || 1}회 제한을 초과했습니다.`);
+                return;
+            }
+
+            if (!confirm(`${date} ${time} 예약을 확정하시겠습니까?`)) return;
+
+            // A. 예약 확정 (Reservations 테이블)
+            const resAdd = await fetch(`${SUPABASE_URL}/rest/v1/Reservations`, {
                 method: 'POST',
-                headers: { 
-                    'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({
-                    student_id: currentUser.id,
-                    lesson_date: date,
-                    lesson_time: "14:00" // 필요시 시간 선택 팝업 추가 가능
-                })
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_id: currentUser.id, lesson_date: date, lesson_time: time })
             });
 
-            if (res.ok) {
-                alert("예약이 완료되었습니다.");
-                loadDashboard();
+            if (resAdd.ok) {
+                // B. 해당 시간표 마감 처리 (ClassSchedules 테이블)
+                await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?id=eq.${scheduleId}`, {
+                    method: 'PATCH',
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_available: false })
+                });
+
+                alert("예약이 성공했습니다!");
+                loadDashboard(); // 화면 갱신
             }
         }
 
@@ -215,4 +402,5 @@
         }
     </script>
 </body>
+
 </html>
