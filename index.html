@@ -311,94 +311,98 @@
             }
         }
 
-        // [단계 1] 날짜 클릭 시 관리자가 개설한 시간을 먼저 확인
+        // [수정된 함수] 날짜 클릭 시 시간을 선택하는 버튼형 팝업을 띄웁니다.
         async function openTimePicker(date) {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?lesson_date=eq.${date}&is_available=eq.true&select=*`, {
+            // 1. 해당 날짜의 수업 시간표(ClassSchedules)를 모두 가져옵니다.
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?lesson_date=eq.${date}`, {
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
             });
-            const availableTimes = await res.json();
+            const daySchedules = await res.json();
 
-            if (availableTimes.length === 0) {
-                alert("선생님이 아직 이 날짜에 수업을 개설하지 않으셨거나 이미 마감되었습니다.");
-                return;
-            }
+            // 2. 시간을 선택할 수 있는 팝업(모달) 배경 생성
+            const modal = document.createElement('div');
+            modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000;";
 
-            // 학생에게 가능한 시간 목록을 보여주고 선택받음
-            const timeList = availableTimes.map(t => t.lesson_time).join(", ");
-            const selectedTime = prompt(`예약할 시간을 입력하세요\n(가능한 시간: ${timeList})`);
+            // 3. 팝업 내용물 상자 생성
+            const content = document.createElement('div');
+            content.style = "background:white; padding:25px; border-radius:20px; width:90%; max-width:380px; text-align:center; box-shadow:0 10px 25px rgba(0,0,0,0.2);";
+            content.innerHTML = `<h3 style="margin-top:0;">${date} 예약</h3><p style="font-size:12px; color:#888;">원하시는 수업 시간을 선택하세요.</p><div id="modal-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:20px;"></div>`;
 
-            const classInfo = availableTimes.find(t => t.lesson_time === selectedTime);
-            if (!classInfo) {
-                if (selectedTime) alert("목록에 있는 시간만 입력해주세요.");
-                return;
-            }
+            const grid = content.querySelector('#modal-grid');
 
-            // 선택이 완료되면 실제 예약 프로세스로 넘김
-            processReservation(date, selectedTime, classInfo.id);
-        }
+            // 4. 09:00부터 23:00까지 버튼 생성 로직
+            const fullTimeSlots = Array.from({ length: 15 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`);
 
-        // [단계 2] 실제 예약 기록 (주차 체크 로직 포함)
-        async function processReservation(date, time, scheduleId) {
-            const selectedDate = new Date(date);
-            const selectedWeek = getWeekOfMonth(selectedDate);
-            const selectedMonth = selectedDate.getMonth();
+            fullTimeSlots.forEach(time => {
+                const schedule = daySchedules.find(s => s.lesson_time === time);
+                const btn = document.createElement('button');
+                btn.innerText = time;
+                btn.style = "padding:12px 5px; border-radius:10px; border:none; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;";
 
-            // 주당 제한 횟수 체크
-            const myResInWeek = reservations.filter(r =>
-                r.student_id === currentUser.id &&
-                new Date(r.lesson_date).getMonth() === selectedMonth &&
-                getWeekOfMonth(new Date(r.lesson_date)) === selectedWeek
-            ).length;
-
-            if (myResInWeek >= (currentUser.weekly_limit || 1)) {
-                alert(`주 ${currentUser.weekly_limit || 1}회 제한을 초과했습니다.`);
-                return;
-            }
-
-            if (!confirm(`${date} ${time} 예약을 확정하시겠습니까?`)) return;
-
-            // A. 예약 확정 (Reservations 테이블)
-            const resAdd = await fetch(`${SUPABASE_URL}/rest/v1/Reservations`, {
-                method: 'POST',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_id: currentUser.id, lesson_date: date, lesson_time: time })
+                // 상태별 버튼 디자인 정의
+                if (schedule && schedule.is_available) {
+                    // 예약 가능한 시간
+                    btn.style.background = "#339af0";
+                    btn.style.color = "white";
+                    btn.onclick = () => {
+                        document.body.removeChild(modal);
+                        processReservation(date, time, schedule.id); // 예약 진행 함수 호출
+                    };
+                } else if (schedule && !schedule.is_available) {
+                    // 이미 예약된 시간
+                    btn.style.background = "#ff6b6b";
+                    btn.style.color = "white";
+                    btn.innerText += "\n(마감)";
+                    btn.disabled = true;
+                    btn.style.cursor = "not-allowed";
+                } else {
+                    // 관리자가 열지 않은 시간
+                    btn.style.background = "#f1f3f5";
+                    btn.style.color = "#ced4da";
+                    btn.disabled = true;
+                    btn.style.cursor = "not-allowed";
+                }
+                grid.appendChild(btn);
             });
 
-            if (resAdd.ok) {
-                // B. 해당 시간표 마감 처리 (ClassSchedules 테이블)
-                await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?id=eq.${scheduleId}`, {
-                    method: 'PATCH',
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_available: false })
-                });
+            // 5. 닫기 버튼 추가
+            const closeBtn = document.createElement('button');
+            closeBtn.innerText = "취소";
+            closeBtn.style = "margin-top:20px; background:#adb5bd; color:white; border:none; width:100%; padding:12px; border-radius:10px; font-weight:bold; cursor:pointer;";
+            closeBtn.onclick = () => document.body.removeChild(modal);
 
-                alert("예약이 성공했습니다!");
-                loadDashboard(); // 화면 갱신
-            }
+            content.appendChild(closeBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
         }
 
         async function cancelReservation(id) {
             if (!confirm("예약을 취소하시겠습니까?")) return;
 
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${id}`, {
+            // 1. 취소하려는 예약 정보 먼저 찾기 (연결된 수업 시간표 ID를 알기 위함)
+            const target = reservations.find(r => r.id === id);
+            if (!target) return;
+
+            // 2. 예약 내역 삭제 (Reservations 테이블)
+            const resDel = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${id}`, {
                 method: 'DELETE',
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
             });
 
-            if (res.ok) {
-                alert("취소되었습니다.");
-                loadDashboard();
+            if (resDel.ok) {
+                // 3. 해당 수업 시간을 다시 '예약 가능' 상태로 복구 (ClassSchedules 테이블)
+                // 날짜와 시간이 일치하는 항목을 찾아 is_available을 true로 변경합니다.
+                await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?lesson_date=eq.${target.lesson_date}&lesson_time=eq.${target.lesson_time}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_available: true })
+                });
+
+                alert("취소되었습니다. 해당 시간대가 다시 오픈되었습니다.");
+                loadDashboard(); // 화면 새로고침
             }
-        }
-
-        function changeMonth(diff) {
-            currentDate.setMonth(currentDate.getMonth() + diff);
-            loadDashboard();
-        }
-
-        function getWeekOfMonth(date) {
-            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-            return Math.ceil((date.getDate() + firstDay) / 7);
         }
     </script>
 </body>
