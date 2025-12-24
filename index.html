@@ -233,19 +233,20 @@
         async function loadDashboard() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
-            const firstDay = new Date(year, month, 1).toISOString();
-            const lastDay = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+            // 시간대 문제를 방지하기 위해 날짜 범위를 정확히 설정합니다.
+            const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+            const lastDay = `${year}-${String(month + 1).padStart(2, '0')}-${new Date(year, month + 1, 0).getDate()}`;
 
             // 1. 해당 월의 모든 예약 가져오기
             const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${firstDay}&lesson_date=lte.${lastDay}&select=*`, {
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
             });
-            const reservations = await res.json();
+            reservations = await res.json(); // 전역 변수 reservations에 저장
 
-            // 2. 횟수 계산 (used_slots 대신 예약 건수 카운트)
+            // 2. 횟수 계산
             const myMonthlyRes = reservations.filter(r => r.student_id === currentUser.id);
             const usedCount = myMonthlyRes.length;
-            const remaining = currentUser.total_slots - usedCount;
+            const remaining = (currentUser.total_slots || 0) - usedCount;
 
             document.getElementById('welcome-name').innerText = `안녕하세요, ${currentUser.Name}님!`;
             document.getElementById('month-usage').innerText = `${month + 1}월 예약 가능 횟수: 총 ${remaining}회 남음`;
@@ -256,51 +257,56 @@
 
         function renderCalendar(reservations) {
             const grid = document.getElementById('calendar-grid');
-            const headers = grid.querySelectorAll('.day-header');
+
+            // [수정 포인트] 헤더(일~토)를 유지하면서 날짜만 지우는 안전한 방법입니다.
+            const dayHeaders = ['일', '월', '화', '수', '목', '금', '토'];
             grid.innerHTML = '';
-            headers.forEach(h => grid.appendChild(h));
+            dayHeaders.forEach(day => {
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'day-header';
+                headerDiv.innerText = day;
+                grid.appendChild(headerDiv);
+            });
 
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             const firstDayIndex = new Date(year, month, 1).getDay();
             const lastDate = new Date(year, month + 1, 0).getDate();
 
-            // 빈 칸 (이전 달 날짜)
+            // 빈 칸 생성
             for (let i = 0; i < firstDayIndex; i++) {
                 const div = document.createElement('div');
                 div.className = 'day empty';
                 grid.appendChild(div);
             }
 
-            // 날짜 칸
+            // 날짜 칸 생성
             for (let d = 1; d <= lastDate; d++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const div = document.createElement('div');
                 div.className = 'day';
 
-                // 오늘 표시
                 const today = new Date();
-                if (year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) div.classList.add('today');
+                const isToday = (year === today.getFullYear() && month === today.getMonth() && d === today.getDate());
+                if (isToday) div.classList.add('today');
 
-                // 해당 날짜 예약 확인
                 const dayRes = reservations.filter(r => r.lesson_date === dateStr);
                 const myRes = dayRes.find(r => r.student_id === currentUser.id);
-
-                // 주차 계산 (같은 주에 예약 있는지 확인)
                 const weekNum = getWeekOfMonth(new Date(year, month, d));
+
+                // 주차 제한 체크 로직
                 const hasBookingInThisWeek = reservations.some(r =>
                     r.student_id === currentUser.id &&
                     getWeekOfMonth(new Date(r.lesson_date)) === weekNum &&
-                    new Date(r.lesson_date).getMonth() === month
+                    new Date(r.lesson_date).getMonth() === month &&
+                    new Date(r.lesson_date).getFullYear() === year
                 );
 
                 div.innerHTML = `<span class="day-num">${d}</span>`;
 
                 if (myRes) {
                     div.innerHTML += `<span class="res-badge res-mine">내 예약</span>`;
-                    div.innerHTML += `<span class="cancel-link" onclick="cancelReservation('${myRes.id}')">취소하기</span>`;
-                } else if (dayRes.length > 0) {
-                    div.innerHTML += `<span class="res-badge res-others">마감</span>`;
+                    div.innerHTML += `<span class="cancel-link" onclick="event.stopPropagation(); cancelReservation('${myRes.id}')">취소하기</span>`;
                 } else if (hasBookingInThisWeek) {
                     div.classList.add('week-blocked');
                     div.innerHTML += `<span class="res-badge" style="color:#ff8787">주1회 완료</span>`;
@@ -310,6 +316,12 @@
 
                 grid.appendChild(div);
             }
+        }
+
+        // 버튼 클릭을 위해 이 함수도 꼭 추가되어 있는지 확인하세요!
+        function changeMonth(diff) {
+            currentDate.setMonth(currentDate.getMonth() + diff);
+            loadDashboard();
         }
 
         // [수정된 함수] 날짜 클릭 시 시간을 선택하는 버튼형 팝업을 띄웁니다.
