@@ -3,162 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>프리미엄 수업 예약 시스템</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    <title>프리미엄 회원제 예약 시스템</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #f8f9fa;
-            --primary-color: #4dabf7;
-            --booked-color: #ff8787;
-            --text-dark: #343a40;
-        }
-
-        body { 
-            font-family: 'Noto Sans KR', sans-serif; 
-            background-color: var(--bg-color);
-            color: var(--text-dark);
-            margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        h1 { margin-bottom: 10px; color: #212529; }
-        .subtitle { color: #868e96; margin-bottom: 30px; }
-
-        /* 달력 그리드 설정 */
-        #lesson-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 15px;
-            width: 100%;
-            max-width: 900px;
-        }
-
-        /* 개별 시간표 카드 디자인 */
-        .slot {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
-            border: 2px solid transparent;
-            cursor: pointer;
-        }
-
-        /* 예약 가능 상태 */
-        .available {
-            border-color: #e7f5ff;
-        }
-        .available:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary-color);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-        }
-        .available strong { color: var(--primary-color); font-size: 1.2em; }
-
-        /* 예약 완료 상태 */
-        .booked {
-            background-color: #fff5f5;
-            border-color: #ffe3e3;
-            cursor: not-allowed;
-            opacity: 0.8;
-        }
-        .booked strong { color: var(--booked-color); }
-
-        .status-badge {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .available .status-badge { background: #e7f5ff; color: #1971c2; }
-        .booked .status-badge { background: #ffe3e3; color: #c92a2a; }
-
-        .student-name {
-            display: block;
-            margin-top: 8px;
-            font-size: 13px;
-            color: #495057;
-            font-weight: bold;
-        }
-
-        /* 새로고침 버튼 (우측 상단) */
-        .refresh-btn {
-            margin-bottom: 20px;
-            padding: 8px 15px;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        }
+        :root { --bg: #f8f9fa; --blue: #4dabf7; --red: #ff8787; --dark: #343a40; }
+        body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--dark); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h1 { margin-bottom: 5px; }
+        .info { color: #868e96; margin-bottom: 30px; font-size: 14px; }
+        #lesson-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 15px; width: 100%; max-width: 900px; }
+        .slot { background: white; border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.2s; border: 2px solid transparent; cursor: pointer; }
+        .available { border-color: #e7f5ff; }
+        .available:hover { transform: translateY(-5px); border-color: var(--blue); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        .booked { background: #fff5f5; border-color: #ffe3e3; cursor: not-allowed; opacity: 0.8; }
+        .time-text { font-size: 1.2em; font-weight: bold; display: block; margin-bottom: 5px; }
+        .available .time-text { color: var(--blue); }
+        .booked .time-text { color: var(--red); }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .available .badge { background: #e7f5ff; color: #1971c2; }
+        .booked .badge { background: #ffe3e3; color: #c92a2a; }
+        .user-name { display: block; margin-top: 8px; font-size: 13px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h1>📅 수업 예약 시간표</h1>
-    <p class="subtitle">원하는 시간을 선택하여 예약을 확정하세요.</p>
-    
-    <button class="refresh-btn" onclick="fetchLessons()">🔄 새로고침</button>
+    <h1>📅 수업 예약 시스템</h1>
+    <p class="info">등록된 성함을 입력하여 남은 횟수 내에서 예약 가능합니다.</p>
 
     <div id="lesson-list">데이터를 불러오는 중...</div>
 
     <script>
-        // 선생님의 실제 정보로 유지해 주세요!
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD'; 
 
+        // 1. 수업 목록 가져오기
         async function fetchLessons() {
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?select=*`, {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?select=*`, {
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
             });
-            const lessons = await response.json();
-            displayLessons(lessons);
+            const data = await res.json();
+            data.sort((a, b) => a.id - b.id);
+            render(data);
         }
 
-        function displayLessons(lessons) {
-            const listDiv = document.getElementById('lesson-list');
-            listDiv.innerHTML = '';
-            
-            // ID 순서대로 정렬 (시간순)
-            lessons.sort((a, b) => a.id - b.id);
-
-            lessons.forEach(lesson => {
+        function render(lessons) {
+            const list = document.getElementById('lesson-list');
+            list.innerHTML = '';
+            lessons.forEach(l => {
                 const div = document.createElement('div');
-                const isBooked = lesson.is_booked;
-                div.className = `slot ${isBooked ? 'booked' : 'available'}`;
-                
+                div.className = `slot ${l.is_booked ? 'booked' : 'available'}`;
                 div.innerHTML = `
-                    <strong>${lesson.time}</strong><br>
-                    <span class="status-badge">${isBooked ? '예약완료' : '예약가능'}</span>
-                    ${isBooked && lesson.student_name ? `<span class="student-name">👤 ${lesson.student_name}님</span>` : ''}
+                    <span class="time-text">${l.time}</span>
+                    <span class="badge">${l.is_booked ? '예약완료' : '예약가능'}</span>
+                    ${l.is_booked ? `<span class="user-name">👤 ${l.student_name}님</span>` : ''}
                 `;
-                
-                if (!isBooked) {
-                    div.onclick = () => bookLesson(lesson.id, lesson.time);
-                }
-                listDiv.appendChild(div);
+                if (!l.is_booked) div.onclick = () => handleBooking(l.id, l.time);
+                list.appendChild(div);
             });
         }
 
-        async function bookLesson(id, time) {
-            const name = prompt(`${time} 예약을 위해 성함을 입력해주세요:`);
-            if (!name || name.trim() === "") return;
+        // 2. 예약 로직 (학생 체크 포함)
+        async function handleBooking(lessonId, time) {
+            const name = prompt("등록된 성함을 입력해주세요:");
+            if (!name) return;
 
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?id=eq.${id}`, {
+            // [A] 학생 정보 조회
+            const studentRes = await fetch(`${SUPABASE_URL}/rest/v1/Students?name=eq.${name}&select=*`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            const students = await studentRes.json();
+
+            if (students.length === 0) {
+                alert("등록되지 않은 이름입니다. 선생님께 문의하세요.");
+                return;
+            }
+
+            const student = students[0];
+            const remaining = student.total_slots - student.used_slots;
+
+            if (remaining <= 0) {
+                alert(`${name}님, 이번 달 예약 가능 횟수(${student.total_slots}회)를 모두 사용하셨습니다.`);
+                return;
+            }
+
+            // [B] 예약 진행 (MyClass 테이블 업데이트)
+            const bookRes = await fetch(`${SUPABASE_URL}/rest/v1/MyClass?id=eq.${lessonId}`, {
                 method: 'PATCH',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_booked: true, student_name: name })
             });
 
-            if (response.ok) {
-                alert(`${name}님, ${time} 예약이 성공적으로 완료되었습니다!`);
+            if (bookRes.ok) {
+                // [C] 학생 사용 횟수 차감 (Students 테이블 업데이트)
+                await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${student.id}`, {
+                    method: 'PATCH',
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ used_slots: student.used_slots + 1 })
+                });
+
+                alert(`${name}님 예약 완료! (남은 횟수: ${remaining - 1}회)`);
                 fetchLessons();
             }
         }
