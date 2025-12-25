@@ -338,8 +338,11 @@
             const firstDay = new Date(year, month, 1).getDay();
             const lastDate = new Date(year, month + 1, 0).getDate();
 
+            // [2] 빈 칸 채우기 부분 수정
             for (let i = 0; i < firstDay; i++) {
-                grid.appendChild(document.createElement('div'));
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'calendar-day empty'; // 👈 테두리가 생기도록 클래스 추가
+                grid.appendChild(emptyDiv);
             }
 
             for (let d = 1; d <= lastDate; d++) {
