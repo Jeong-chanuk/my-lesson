@@ -327,12 +327,13 @@
             const month = adminCurrentDate.getMonth();
             monthText.innerText = `${year}년 ${month + 1}월`;
 
+            // 2. 요일 헤더를 새로 만듭니다.
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             days.forEach(d => {
-                const header = document.createElement('div');
-                header.className = 'calendar-header';
-                header.innerText = d;
-                grid.appendChild(header);
+                const h = document.createElement('div');
+                h.className = 'calendar-header';
+                h.innerText = d;
+                grid.appendChild(h);
             });
 
             const firstDay = new Date(year, month, 1).getDay();
