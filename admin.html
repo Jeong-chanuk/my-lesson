@@ -339,6 +339,7 @@
                 console.error("대시보드 에러:", err);
                 allReservations = [];
                 renderAdminCalendar();
+                renderStudentManagement(students); // 👈 이 줄을 추가해서 화면에 학생 목록을 그리게 합니다.
             }
         }
 
@@ -461,6 +462,13 @@
     <div class="container" style="margin-top: 20px;">
         <div id="schedule-list"></div>
     </div>
+    <div id="admin-calendar-grid"></div>
+    </div>
+    <section id="student-management" style="margin-top: 40px; padding: 20px; border-top: 2px solid #eee;">
+        <h3>👥 학생 수업 횟수 관리</h3>
+        <div id="student-list-container">
+        </div>
+    </section>
 </body>
 
 </html>
