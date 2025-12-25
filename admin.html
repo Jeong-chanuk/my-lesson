@@ -130,20 +130,50 @@
             gap: 3px;
         }
 
-        /* 3. 예약 버튼(뱃지): 아주 슬림하고 깔끔하게 수정 */
+        /* 1. 예약 뱃지: 아주 얇고 진한 파란색 스타일 */
         .admin-res-badge {
-            background: #f1f3f5;
-            color: #333;
-            font-size: 11px;
-            /* 글자 크기 줄임 */
-            padding: 3px 6px;
-            /* 위아래 두께를 대폭 줄임 */
-            border-radius: 4px;
-            border-left: 3px solid #339af0;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
+            background-color: #e7f5ff !important;
+            /* 연한 파랑 배경 */
+            color: #0056b3 !important;
+            /* 진한 파랑 글자 */
+            border-left: 3px solid #0056b3 !important;
+            /* 왼쪽 강조 선 */
+
+            /* 크기 조절의 핵심: 여백을 최소화합니다 */
+            padding: 1px 4px !important;
+            margin: 1px 0 !important;
+            font-size: 11px !important;
+            /* 글자 크기를 작게 */
+            line-height: 1.2 !important;
+            /* 줄 간격을 좁게 */
+
+            border-radius: 3px !important;
+            display: flex !important;
+            align-items: center !important;
             white-space: nowrap;
+            /* 한 줄로 표시 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            /* 이름 길면 점표시(...) */
+            cursor: default;
+        }
+
+        /* 2. 시간 텍스트만 더 진하게 강조 */
+        .res-time {
+            font-weight: 800 !important;
+            margin-right: 4px !important;
+            color: #004085 !important;
+        }
+
+        /* 3. 날짜 칸 자체의 세로 길이 확보 */
+        .calendar-day {
+            min-height: 160px !important;
+            /* 6명 예약을 다 보여주기 위한 높이 */
+            padding: 4px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1px !important;
+            /* 뱃지 사이 간격을 최소화 */
         }
 
         /* 4. 요일 이름 (일~토) */
@@ -178,7 +208,7 @@
         <div id="day-list-content"></div>
     </div>
 
-<script>
+    <script>
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
 
@@ -200,7 +230,7 @@
         function renderTimeGrid(currentSchedules, date) {
             const grid = document.getElementById('time-grid');
             const listContent = document.getElementById('day-list-content');
-            if(!grid || !listContent) return;
+            if (!grid || !listContent) return;
 
             grid.innerHTML = '';
             listContent.innerHTML = '';
@@ -220,7 +250,7 @@
                     btn.style.background = "#339af0";
                     btn.style.color = "white";
                     if (!schedule.is_available) {
-                        btn.style.background = "#ff6b6b"; 
+                        btn.style.background = "#ff6b6b";
                         btn.innerText += " (마감)";
                     }
                 } else {
@@ -254,7 +284,7 @@
                     body: JSON.stringify({ lesson_date: date, lesson_time: time, is_available: true })
                 });
             }
-            fetchDaySchedules(); 
+            fetchDaySchedules();
         }
 
         let adminCurrentDate = new Date();
