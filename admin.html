@@ -343,6 +343,28 @@
             }
         }
 
+        function renderStudentManagement(studentsList) {
+            const container = document.getElementById('student-list-container');
+            if (!container) return;
+
+            container.innerHTML = ''; // 기존 내용 삭제
+
+            studentsList.forEach(student => {
+                const item = document.createElement('div');
+                item.className = 'student-item';
+
+                // 이미지(image_0a02a6.png)에서 확인된 컬럼명 'Name' 사용
+                item.innerHTML = `
+            <span><strong>${student.Name}</strong> (ID: ${student.id})</span>
+            <div>
+                <input type="number" class="slot-input" id="slot-${student.id}" value="${student.total_slots}">
+                <button class="update-btn" onclick="updateStudentSlots(${student.id})">수정</button>
+            </div>
+        `;
+                container.appendChild(item);
+            });
+        }
+
         function renderAdminCalendar() {
             const grid = document.getElementById('admin-calendar-grid');
             const monthText = document.getElementById('admin-current-month');
