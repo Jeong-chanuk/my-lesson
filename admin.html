@@ -334,12 +334,13 @@
 
                 console.log("이름 매칭 완료:", allReservations);
                 renderAdminCalendar();
+                renderStudentManagement(students); // 👈 이 줄을 추가해서 화면에 학생 목록을 그리게 합니다.
 
             } catch (err) {
                 console.error("대시보드 에러:", err);
                 allReservations = [];
                 renderAdminCalendar();
-                renderStudentManagement(students); // 👈 이 줄을 추가해서 화면에 학생 목록을 그리게 합니다.
+
             }
         }
 
