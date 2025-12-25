@@ -185,6 +185,18 @@
             font-size: 13px;
             color: #495057;
             border-bottom: 2px solid #dee2e6;
+
+
+            width: fit-content !important;
+            /* 👈 핵심: 글자 길이에 딱 맞게 너비를 제한함 */
+            align-self: flex-start !important;
+            /* 👈 핵심: 왼쪽 정렬하며 늘어나지 않게 함 */
+
+            /* 혹시 몰라 한 번 더 확인하는 슬림 설정 */
+            padding: 1px 5px !important;
+            margin: 1px 0 !important;
+            min-height: 18px !important;
+            /* 너무 얇아지는 것 방지 */
         }
     </style>
 </head>
