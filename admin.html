@@ -304,27 +304,37 @@
 
         async function loadAdminDashboard() {
             try {
-                // 수정된 부분: Reservations를 가져올 때 Students 테이블의 name을 조인해서 가져옴
-                // student_id는 Students 테이블의 외래키(Foreign Key)여야 합니다.
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*,Students(name)`, {
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
+                // 1. 예약 데이터와 학생 데이터를 각각 가져옵니다.
+                const [resReservations, resStudents] = await Promise.all([
+                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*`, {
+                        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                    }),
+                    // Students 테이블에서 id와 대문자 'Name'을 가져옵니다.
+                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, {
+                        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                    })
+                ]);
+
+                if (!resReservations.ok || !resStudents.ok) throw new Error("데이터 로드 실패");
+
+                const reservations = await resReservations.json();
+                const students = await resStudents.json();
+
+                // 2. 학생 ID를 key로, 대문자 Name을 value로 하는 지도를 만듭니다.
+                const studentMap = {};
+                students.forEach(s => {
+                    studentMap[s.id] = s.Name; // image_0a02a6.png의 대문자 'Name' 반영
                 });
 
-                if (!res.ok) throw new Error("데이터 로드 실패");
-
-                const rawData = await res.json();
-
-                // 가져온 데이터를 우리 코드 형식에 맞게 변환 (Students.name을 student_name으로 매핑)
-                allReservations = rawData.map(r => ({
+                // 3. 예약 데이터의 student_id와 학생 지도의 id를 매칭시켜 이름을 넣습니다.
+                allReservations = reservations.map(r => ({
                     ...r,
-                    student_name: r.Students ? r.Students.name : `ID:${r.student_id}`
+                    student_name: studentMap[r.student_id] || `ID:${r.student_id}`
                 }));
 
-                console.log("조인된 예약 데이터:", allReservations);
+                console.log("이름 매칭 완료:", allReservations);
                 renderAdminCalendar();
+
             } catch (err) {
                 console.error("대시보드 에러:", err);
                 allReservations = [];
