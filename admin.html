@@ -304,11 +304,26 @@
 
         async function loadAdminDashboard() {
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*`, {
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                // 수정된 부분: Reservations를 가져올 때 Students 테이블의 name을 조인해서 가져옴
+                // student_id는 Students 테이블의 외래키(Foreign Key)여야 합니다.
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*,Students(name)`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
                 });
+
                 if (!res.ok) throw new Error("데이터 로드 실패");
-                allReservations = await res.json();
+
+                const rawData = await res.json();
+
+                // 가져온 데이터를 우리 코드 형식에 맞게 변환 (Students.name을 student_name으로 매핑)
+                allReservations = rawData.map(r => ({
+                    ...r,
+                    student_name: r.Students ? r.Students.name : `ID:${r.student_id}`
+                }));
+
+                console.log("조인된 예약 데이터:", allReservations);
                 renderAdminCalendar();
             } catch (err) {
                 console.error("대시보드 에러:", err);
