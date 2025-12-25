@@ -383,13 +383,50 @@
                 dayRes.forEach(res => {
                     const badge = document.createElement('div');
                     badge.className = 'admin-res-badge';
+
+                    // [추가] 클릭하면 삭제 함수가 실행되도록 연결
                     const displayName = res.student_name || `ID:${res.student_id}`;
-                    badge.innerHTML = `<span class="res-time">${res.lesson_time}</span> <span>${displayName}</span>`;
+                    badge.onclick = () => deleteReservation(res.id, displayName);
+                    badge.style.cursor = 'pointer'; // 클릭 가능하다는 표시
+
+                    badge.innerHTML = `
+        <span class="res-time">${res.lesson_time}</span>
+        <span>${displayName}</span>
+    `;
                     dayDiv.appendChild(badge);
                 });
                 grid.appendChild(dayDiv);
             }
         } // <--- renderAdminCalendar 함수가 여기서 정확히 닫혀야 합니다.
+
+        async function deleteReservation(resId, studentName) {
+            // 1. 실수로 지우는 것을 방지하기 위한 확인창
+            if (!confirm(`[${studentName}] 학생의 예약을 강제로 취소하시겠습니까?`)) return;
+
+            try {
+                // 2. Supabase DELETE 요청
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${resId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (res.ok) {
+                    alert("예약이 정상적으로 취소되었습니다.");
+                    // 3. 데이터 다시 불러와서 화면 갱신
+                    loadAdminDashboard();
+                } else {
+                    const errorData = await res.json();
+                    throw new Error(errorData.message || "삭제 실패");
+                }
+            } catch (err) {
+                console.error("삭제 중 오류:", err);
+                alert("예약 취소 중 오류가 발생했습니다: " + err.message);
+            }
+        }
 
         function changeAdminMonth(offset) {
             adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
