@@ -309,7 +309,7 @@
                 const currentYear = adminCurrentDate.getFullYear();
                 const currentMonth = String(adminCurrentDate.getMonth() + 1).padStart(2, '0');
                 currentMonthKey = `${currentYear}-${currentMonth}`;
-                const monthKey = currentMonthKey;
+               
 
                 // 1. 예약 데이터와 학생 데이터를 각각 가져옵니다.
                 const [resReservations, resStudents, resMonthlySlots] = await Promise.all([
@@ -346,7 +346,7 @@
 
                 console.log("이름 매칭 완료:", allReservations);
                 renderAdminCalendar();
-                renderStudentManagement(students, monthlySlots, monthKey); // 👈 이 줄을 추가해서 화면에 학생 목록을 그리게 합니다.
+                renderStudentManagement(students, monthlySlots, currentMonthKey); // 👈 이 줄을 추가해서 화면에 학생 목록을 그리게 합니다.
 
             } catch (err) {
                 console.error("대시보드 에러:", err);
@@ -384,10 +384,10 @@
         }
 
         // 이 함수는 '특정 월'의 데이터를 저장하거나 수정합니다.
-        async function updateMonthlySlot(studentId, monthKey) {
+        async function updateMonthlySlot(studentId, currentMonthKey) {
             const newValue = document.getElementById(`slot-${studentId}`).value;
 
-            if (!confirm(`${monthKey} 수강 횟수를 ${newValue}회로 변경하시겠습니까?`)) return;
+            if (!confirm(`${currentMonthKey} 수강 횟수를 ${newValue}회로 변경하시겠습니까?`)) return;
 
             try {
                 // Supabase의 Upsert 기능: 데이터가 없으면 새로 만들고, 있으면 수정합니다.
@@ -402,7 +402,7 @@
                     },
                     body: JSON.stringify({
                         student_id: studentId,
-                        month_key: monthKey,
+                        month_key: currentMonthKey,
                         allowed_slots: parseInt(newValue)
                     })
                 });
