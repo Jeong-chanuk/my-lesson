@@ -261,7 +261,7 @@
 
             const myMonthlyRes = reservations.filter(r => r.student_id === currentUser.id);
             const usedCount = myMonthlyRes.length;
-            const remaining = allowSlots - usedCount;
+            const remaining = allowedSlots - usedCount;
 
             document.getElementById('welcome-name').innerText = `안녕하세요, ${currentUser.Name}님!`;
             document.getElementById('month-usage').innerText = `${month + 1}월 예약 가능 횟수: 총 ${remaining}회 남음`;
