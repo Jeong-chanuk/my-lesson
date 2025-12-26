@@ -221,6 +221,7 @@
     </div>
 
     <script>
+        let currentMonthKey = ""; // 현재 선택된 월을 저장할 전역 변수
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
 
@@ -307,7 +308,8 @@
                 // [수정] fetch를 하기 전에 monthKey를 먼저 정의해야 합니다.
                 const currentYear = adminCurrentDate.getFullYear();
                 const currentMonth = String(adminCurrentDate.getMonth() + 1).padStart(2, '0');
-                const monthKey = `${currentYear}-${currentMonth}`;
+                currentMonthKey = `${currentYear}-${currentMonth}`;
+                const monthKey = currentMonthKey;
 
                 // 1. 예약 데이터와 학생 데이터를 각각 가져옵니다.
                 const [resReservations, resStudents, resMonthlySlots] = await Promise.all([
