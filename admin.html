@@ -304,13 +304,22 @@
 
         async function loadAdminDashboard() {
             try {
+                // [수정] fetch를 하기 전에 monthKey를 먼저 정의해야 합니다.
+                const currentYear = adminCurrentDate.getFullYear();
+                const currentMonth = String(adminCurrentDate.getMonth() + 1).padStart(2, '0');
+                const monthKey = `${currentYear}-${currentMonth}`;
+
                 // 1. 예약 데이터와 학생 데이터를 각각 가져옵니다.
-                const [resReservations, resStudents] = await Promise.all([
+                const [resReservations, resStudents, resMonthlySlots] = await Promise.all([
                     fetch(`${SUPABASE_URL}/rest/v1/Reservations?select=*`, {
                         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                     }),
                     // Students 테이블에서 id와 대문자 'Name'을 가져옵니다.-> 그냥 전체를 가져오는 것으로 변경
                     fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, {
+                        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                    }),
+                    // 현재 달의 설정값만 가져오기
+                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, {
                         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
                     })
                 ]);
@@ -319,6 +328,7 @@
 
                 const reservations = await resReservations.json();
                 const students = await resStudents.json();
+                const monthlySlots = await resMonthlySlots.json();
 
                 // 2. 학생 ID를 key로, 대문자 Name을 value로 하는 지도를 만듭니다.
                 const studentMap = {};
@@ -344,13 +354,18 @@
             }
         }
 
-        function renderStudentManagement(studentsList) {
+        function renderStudentManagement(students, monthlySlots, monthKey) {
             const container = document.getElementById('student-list-container');
             if (!container) return;
 
-            container.innerHTML = ''; // 기존 내용 삭제
+            container.innerHTML = `<h3 style="margin-top:20px;">📅 ${monthKey} 수강 횟수 설정</h3>`;
 
             studentsList.forEach(student => {
+                // [핵심] 이번 달 설정값이 있는지 찾습니다.
+                const slotConfig = monthlySlots.find(s => s.student_id === student.id);
+                const currentAllowed = slotConfig ? slotConfig.allowed_slots : 0;
+
+
                 const item = document.createElement('div');
                 item.className = 'student-item';
 
@@ -366,28 +381,41 @@
             });
         }
 
-        // 학생 수업 횟수 수정 함수
-        async function updateStudentSlots(studentId) {
-            const newSlotValue = document.getElementById(`slot-${studentId}`).value;
-            if (!confirm("수업 횟수를 변경하시겠습니까?")) return;
+        // 이 함수는 '특정 월'의 데이터를 저장하거나 수정합니다.
+        async function updateMonthlySlot(studentId, monthKey) {
+            const newValue = document.getElementById(`slot-${studentId}`).value;
+
+            if (!confirm(`${monthKey} 수강 횟수를 ${newValue}회로 변경하시겠습니까?`)) return;
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${studentId}`, {
-                    method: 'PATCH',
+                // Supabase의 Upsert 기능: 데이터가 없으면 새로 만들고, 있으면 수정합니다.
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
+                    method: 'POST', // Upsert를 위해 POST 사용
                     headers: {
                         'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        // 중복 데이터(같은 학생+같은 달)가 오면 업데이트하라는 설정입니다.
+                        'Prefer': 'resolution=merge-duplicates'
                     },
-                    body: JSON.stringify({ total_slots: parseInt(newSlotValue) })
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        month_key: monthKey,
+                        allowed_slots: parseInt(newValue)
+                    })
                 });
 
                 if (res.ok) {
-                    alert("수정되었습니다.");
-                    loadAdminDashboard();
+                    alert("설정이 저장되었습니다.");
+                    loadAdminDashboard(); // 화면 새로고침하여 반영
+                } else {
+                    const errorData = await res.json();
+                    console.error("저장 실패:", errorData);
+                    alert("저장에 실패했습니다.");
                 }
             } catch (err) {
-                alert("수정 중 오류 발생");
+                console.error("에러 발생:", err);
+                alert("네트워크 오류가 발생했습니다.");
             }
         }
         function renderAdminCalendar() {
