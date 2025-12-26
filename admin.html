@@ -356,11 +356,11 @@
             }
         }
 
-        function renderStudentManagement(students, monthlySlots, monthKey) {
+        function renderStudentManagement(students, monthlySlots, currentMonthKey) {
             const container = document.getElementById('student-list-container');
             if (!container) return;
 
-            container.innerHTML = `<h3 style="margin-top:20px;">📅 ${monthKey} 수강 횟수 설정</h3>`;
+            container.innerHTML = `<h3 style="margin-top:20px;">📅 ${currentMonthKey} 수강 횟수 설정</h3>`;
 
             students.forEach(student => {
                 // [핵심] 이번 달 설정값이 있는지 찾습니다.
