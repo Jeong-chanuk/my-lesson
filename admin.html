@@ -360,7 +360,7 @@
 
             container.innerHTML = `<h3 style="margin-top:20px;">📅 ${monthKey} 수강 횟수 설정</h3>`;
 
-            studentsList.forEach(student => {
+            students.forEach(student => {
                 // [핵심] 이번 달 설정값이 있는지 찾습니다.
                 const slotConfig = monthlySlots.find(s => s.student_id === student.id);
                 const currentAllowed = slotConfig ? slotConfig.allowed_slots : 0;
