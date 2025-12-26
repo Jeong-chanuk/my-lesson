@@ -374,7 +374,7 @@
             <span><strong>${student.Name}</strong> (ID: ${student.id})</span>
             <div>
                 <input type="number" class="slot-input" id="slot-${student.id}" value="${student.total_slots}">
-                <button class="update-btn" onclick="updateStudentSlots(${student.id})">수정</button>
+                <button class="update-btn" onclick="updateMonthlySlot(${student.id})">수정</button>
             </div>
         `;
                 container.appendChild(item);
