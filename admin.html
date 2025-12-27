@@ -525,41 +525,26 @@
 
         async function addNewStudent() {
             const name = document.getElementById('new-student-name').value;
-            const slots = document.getElementById('initial-slots').value;
-
-            if (!name) {
-                alert("이름을 입력해주세요.");
-                return;
-            }
+            const slots = document.getElementById('initial-slots').value; // 초기 부여 횟수
 
             try {
-                // 1. Students 테이블에 새 학생 추가 (이름만 넣으면 ID는 자동생성됨)
+                // 1단계: Students 테이블에는 'Name'만 저장 (id는 자동생성)
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/Students`, {
                     method: 'POST',
                     headers: {
                         'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
                         'Content-Type': 'application/json',
-                        'Prefer': 'return=representation' // 생성된 데이터를 바로 받아오기 위함
+                        'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify({
-                        Name: name,
-                        total_slots: 0
-                    })
+                    body: JSON.stringify({ Name: name }) // 더 이상 slots를 보내지 않음!
                 });
 
-                if (!res.ok) {
-                    const errorBody = await res.json();
-                    console.error("🔥 서버 응답 에러 상세:", errorBody);
-                    alert(`등록 실패: ${errorBody.message} (${errorBody.details})`);
-                    return; // 에러가 나면 여기서 멈춤
-                }
-
                 const addedStudent = await res.json();
-                const newId = addedStudent[0].id; // 방금 생성된 학생의 ID
+                const newId = addedStudent[0].id;
 
-                // 2. 현재 선택된 월(currentMonthKey)에 대해 기본 횟수 설정
-                const resSlot = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
+                // 2단계: 부여된 횟수는 MonthlySlots 테이블에 저장
+                await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
                     method: 'POST',
                     headers: {
                         'apikey': SUPABASE_KEY,
@@ -568,20 +553,15 @@
                     },
                     body: JSON.stringify({
                         student_id: newId,
-                        month_key: currentMonthKey,
+                        month_key: currentMonthKey, // 현재 관리 중인 달 (예: "2024-05")
                         allowed_slots: parseInt(slots)
                     })
                 });
 
-                if (resSlot.ok) {
-                    alert(`${name} 학생이 등록되었고, ${currentMonthKey} 횟수가 설정되었습니다.`);
-                    document.getElementById('new-student-name').value = ''; // 입력창 비우기
-                    loadAdminDashboard(); // 명단 새로고침
-                }
-
+                alert(`${name} 학생 등록 및 ${slots}회 부여 완료!`);
+                loadAdminDashboard();
             } catch (err) {
                 console.error(err);
-                alert("등록 중 오류가 발생했습니다.");
             }
         }
 
