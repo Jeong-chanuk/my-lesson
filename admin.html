@@ -542,7 +542,7 @@
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation' // 생성된 데이터를 바로 받아오기 위함
                     },
-                    body: JSON.stringify({ name: Name })
+                    body: JSON.stringify({ Name: name })
                 });
 
                 if (!res.ok) throw new Error("학생 등록 실패");
