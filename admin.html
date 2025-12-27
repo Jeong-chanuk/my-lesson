@@ -320,28 +320,42 @@
             if (res.ok) { document.getElementById('new-name').value = ''; refreshDashboard(); }
         }
 
-        function renderCalendar(reservations) {
+        function renderCalendar(reservations, students) {
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
-            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => grid.innerHTML += `<div class="cal-header">${d}</div>`);
+
+            // 요일 헤더 생성
+            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => {
+                grid.innerHTML += `<div class="cal-header">${d}</div>`;
+            });
 
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const lastDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
+            // 1일 앞의 빈칸 생성
             for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="cal-day"></div>`;
+
+            // 날짜별 칸 생성
             for (let d = 1; d <= lastDate; d++) {
                 const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const dayRes = reservations.filter(r => r.lesson_date === dateStr);
-                const resHtml = dayRes.map(r => `<div class="res-item" onclick="deleteRes('${r.id}')">${r.lesson_time} ${r.student_id}</div>`).join('');
-                const resHtml = dayRes.map(r => {
+
+                // 해당 날짜의 예약 필터링
+                const dayRes = Array.isArray(reservations) ? reservations.filter(r => r.lesson_date === dateStr) : [];
+
+                // 중요: 변수 중복 에러를 방지하기 위해 이름을 고유하게(renderResHtml) 지정함
+                const renderResHtml = dayRes.map(r => {
+                    // 학생 ID(숫자)로 학생 이름 찾기
                     const student = students.find(s => s.id === Number(r.student_id));
-                    const studentName = student ? student.Name : "알 수 없음"; // 이름을 찾으면 출력, 없으면 ID 표시
-                    return `<div class="res-item" onclick="deleteRes('${r.id}')">${r.lesson_time} ${studentName}</div>`;
+                    const displayName = student ? student.Name : r.student_id; // 이름 없으면 ID 표시
+
+                    return `<div class="res-item" onclick="deleteRes('${r.id}')">
+                        ${r.lesson_time} ${displayName}
+                    </div>`;
                 }).join('');
-                grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${resHtml}</div>`;
+
+                grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${renderResHtml}</div>`;
             }
         }
-
         async function deleteRes(id) {
             if (!confirm("예약을 삭제할까요?")) return;
             await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${id}`, { method: 'DELETE', headers });
