@@ -1,37 +1,160 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>수업 관리자 통합 모드</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --blue: #339af0; --green: #28a745; --red: #ff6b6b; --gray: #f8f9fa; }
-        body { font-family: 'Noto Sans KR', sans-serif; background: var(--gray); padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .admin-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); width: 100%; max-width: 600px; margin-bottom: 20px; box-sizing: border-box; }
-        h2, h3 { color: var(--blue); margin-top: 0; text-align: center; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        
+        :root {
+            --blue: #339af0;
+            --green: #28a745;
+            --red: #ff6b6b;
+            --gray: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--gray);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .admin-card {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        h2,
+        h3 {
+            color: var(--blue);
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         /* 시간표 그리드 */
-        .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; }
-        .time-btn { padding: 10px; background: #eee; color: #333; border-radius: 8px; font-size: 12px; text-align: center; cursor: pointer; }
-        .time-btn.active { background: var(--blue); color: white; }
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .time-btn {
+            padding: 10px;
+            background: #eee;
+            color: #333;
+            border-radius: 8px;
+            font-size: 12px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .time-btn.active {
+            background: var(--blue);
+            color: white;
+        }
 
         /* 학생 관리 테이블 */
-        .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .admin-table th { background: #f1f3f5; padding: 10px; font-size: 13px; border-bottom: 2px solid #dee2e6; }
-        .admin-table td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .admin-table th {
+            background: #f1f3f5;
+            padding: 10px;
+            font-size: 13px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .admin-table td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
 
         /* 월간 달력 */
-        #calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #dee2e6; border-radius: 10px; overflow: hidden; margin-top: 10px; }
-        .cal-header { background: #f8f9fa; padding: 10px; text-align: center; font-weight: bold; font-size: 12px; }
-        .cal-day { background: white; min-height: 80px; padding: 5px; font-size: 11px; box-sizing: border-box; position: relative; }
-        .res-item { background: #e7f5ff; color: #0056b3; padding: 2px; margin-top: 2px; border-radius: 3px; cursor: pointer; font-size: 10px; }
+        #calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: #dee2e6;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .cal-header {
+            background: #f8f9fa;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .cal-day {
+            background: white;
+            min-height: 80px;
+            padding: 5px;
+            font-size: 11px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .res-item {
+            background: #e7f5ff;
+            color: #0056b3;
+            padding: 2px;
+            margin-top: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="admin-card">
@@ -80,31 +203,31 @@
         function initTimeGrid() {
             const grid = document.getElementById('time-grid');
             const times = ["14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
-            grid.innerHTML = times.map(t => `<div class="time-btn" id="time-${t.replace(':','')}" onclick="toggleSchedule('${t}')">${t}</div>`).join('');
+            grid.innerHTML = times.map(t => `<div class="time-btn" id="time-${t.replace(':', '')}" onclick="toggleSchedule('${t}')">${t}</div>`).join('');
         }
 
         async function fetchDaySchedules() {
             const date = document.getElementById('lesson-date').value;
-            if(!date) return;
+            if (!date) return;
             // ClassSchedules 또는 Schedules 등 사용하시는 테이블명에 맞춰 수정 필요 (현재 이미지엔 ClassSchedules 보임)
             const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?lesson_date=eq.${date}`, { headers });
             const data = await res.json();
             document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
-            if(Array.isArray(data)) {
+            if (Array.isArray(data)) {
                 data.forEach(s => {
-                    const id = `time-${s.lesson_time.replace(':','')}`;
-                    if(document.getElementById(id)) document.getElementById(id).classList.add('active');
+                    const id = `time-${s.lesson_time.replace(':', '')}`;
+                    if (document.getElementById(id)) document.getElementById(id).classList.add('active');
                 });
             }
         }
 
         async function toggleSchedule(time) {
             const date = document.getElementById('lesson-date').value;
-            if(!date) return alert("날짜를 먼저 선택하세요.");
-            const btn = document.getElementById(`time-${time.replace(':','')}`);
+            if (!date) return alert("날짜를 먼저 선택하세요.");
+            const btn = document.getElementById(`time-${time.replace(':', '')}`);
             const isActive = btn.classList.contains('active');
 
-            if(!isActive) {
+            if (!isActive) {
                 await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules`, {
                     method: 'POST', headers, body: JSON.stringify({ lesson_date: date, lesson_time: time })
                 });
@@ -118,54 +241,118 @@
         async function refreshDashboard() {
             const year = viewDate.getFullYear();
             const month = viewDate.getMonth() + 1;
-            const monthKey = `${year}-${String(month).padStart(2,'0')}`;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
             document.getElementById('current-month-label').innerText = `${year}년 ${month}월`;
 
             try {
-                // Students 테이블에서 total_slots 없이 Name만 가져옴 (image_4b3b7c 대응)
-                const stdRes = await fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, { headers });
-                const resRes = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers });
+                const [stdRes, slotRes, resRes] = await Promise.all([
+                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, { headers }),
+                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month=eq.${monthKey}`, { headers }),
+                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers })
+                ]);
 
                 const students = await stdRes.json();
+                const monthlySlots = await slotRes.json();
                 const reservations = await resRes.json();
 
-                renderStudentTable(students);
+                renderStudentTable(students, monthlySlots, reservations);
                 renderCalendar(Array.isArray(reservations) ? reservations : []);
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("데이터 갱신 중 오류:", e); }
         }
 
-        function renderStudentTable(students) {
-            let html = `<table class="admin-table"><thead><tr><th>ID</th><th>이름</th><th>관리</th></tr></thead><tbody>`;
-            if(Array.isArray(students)) {
-                students.forEach(s => {
-                    html += `<tr><td>${s.id}</td><td><strong>${s.Name}</strong></td><td><button onclick="delStudent(${s.id})" style="background:var(--red); padding:5px; width:auto; font-size:11px;">삭제</button></td></tr>`;
-                });
-            }
+        function renderStudentTable(students, monthlySlots, reservations) {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+            let html = `
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>이번 달 배정</th>
+                    <th>사용/잔여</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+            students.forEach(s => {
+                // 1. 이번 달 배정된 횟수 찾기 (StudentMonthlySlots 테이블 기준)
+                const slotData = monthlySlots.find(m => m.student_id === s.id && m.month === monthKey);
+                const assigned = slotData ? slotData.total_slots : 0;
+
+                // 2. 이번 달 실제 예약(사용) 횟수 계산 (Reservations 테이블 기준)
+                const used = reservations.filter(r => r.student_id === s.id && r.lesson_date.startsWith(monthKey)).length;
+                const remaining = assigned - used;
+
+                html += `
+            <tr>
+                <td><strong>${s.Name}</strong></td>
+                <td>
+                    <input type="number" value="${assigned}" 
+                           onchange="updateTotalSlots(${s.id}, this.value)" 
+                           style="width:50px; padding:5px; text-align:center;"> 회
+                </td>
+                <td>
+                    <span style="color:var(--blue)">${used}</span> / 
+                    <span style="${remaining < 0 ? 'color:var(--red)' : ''}">${remaining}</span>
+                </td>
+                <td>
+                    <button onclick="delStudent(${s.id})" style="background:var(--red); padding:5px 10px; width:auto; font-size:11px;">삭제</button>
+                </td>
+            </tr>`;
+            });
             document.getElementById('student-list-container').innerHTML = html + `</tbody></table>`;
+        }
+
+        // --- 횟수 업데이트 함수 추가 ---
+        async function updateTotalSlots(studentId, newCount) {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+            // StudentMonthlySlots 테이블에 데이터가 있으면 업데이트(upsert)
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
+                method: 'POST',
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    month: monthKey,
+                    total_slots: parseInt(newCount)
+                })
+            });
+
+            if (res.ok) {
+                alert("배정 횟수가 저장되었습니다.");
+                refreshDashboard();
+            } else {
+                alert("횟수 저장 실패. 테이블 설정을 확인하세요.");
+            }
         }
 
         async function addNewStudent() {
             const name = document.getElementById('new-name').value;
-            if(!name) return;
+            if (!name) return;
             // total_slots를 코드에서 완전히 제거하여 400 에러 방지
             const res = await fetch(`${SUPABASE_URL}/rest/v1/Students`, {
                 method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
                 body: JSON.stringify({ Name: name })
             });
-            if(res.ok) { document.getElementById('new-name').value = ''; refreshDashboard(); }
+            if (res.ok) { document.getElementById('new-name').value = ''; refreshDashboard(); }
         }
 
         function renderCalendar(reservations) {
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
-            ['일','월','화','수','목','금','토'].forEach(d => grid.innerHTML += `<div class="cal-header">${d}</div>`);
+            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => grid.innerHTML += `<div class="cal-header">${d}</div>`);
 
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const lastDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
-            for(let i=0; i<firstDay; i++) grid.innerHTML += `<div class="cal-day"></div>`;
-            for(let d=1; d<=lastDate; d++) {
-                const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="cal-day"></div>`;
+            for (let d = 1; d <= lastDate; d++) {
+                const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayRes = reservations.filter(r => r.lesson_date === dateStr);
                 const resHtml = dayRes.map(r => `<div class="res-item" onclick="deleteRes('${r.id}')">${r.lesson_time} ${r.student_id}</div>`).join('');
                 grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${resHtml}</div>`;
@@ -173,13 +360,13 @@
         }
 
         async function deleteRes(id) {
-            if(!confirm("예약을 삭제할까요?")) return;
+            if (!confirm("예약을 삭제할까요?")) return;
             await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${id}`, { method: 'DELETE', headers });
             refreshDashboard();
         }
 
         async function delStudent(id) {
-            if(!confirm("학생을 삭제할까요?")) return;
+            if (!confirm("학생을 삭제할까요?")) return;
             await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${id}`, { method: 'DELETE', headers });
             refreshDashboard();
         }
@@ -190,4 +377,5 @@
         }
     </script>
 </body>
+
 </html>
