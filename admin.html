@@ -370,64 +370,69 @@
 
         // 관리자 대시보드 로드 및 표 렌더링
         async function loadAdminDashboard() {
-            const month = document.getElementById('month-select').value;
-
-            // 1. 모든 학생 정보 가져오기
-            const studentsRes = await fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`);
-            const students = await studentsRes.json();
-
-            // 2. 해당 월의 설정값(allowed_slots) 가져오기
-            const slotsRes = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${month}`);
-            const slotsData = await slotsRes.json();
-
-            // 3. 해당 월의 실제 예약 내역 가져오기 (사용 횟수 계산용)
-            const reservationsRes = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?date=gte.${month}-01&date=lte.${month}-31`);
-            const reservations = await reservationsRes.json();
+            // 1. 현재 선택된 연월 가져오기 (예: "2025-12")
+            const year = document.getElementById('current-year').innerText;
+            const month = document.getElementById('current-month').innerText.replace('월', '').padStart(2, '0');
+            const monthKey = `${year}-${month}`;
 
             const container = document.getElementById('student-management-container');
+            if (!container) return;
 
-            // 테이블 헤더 구성
-            let html = `
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>학생 이름 (ID)</th>
-                    <th>전체 부여 횟수</th>
-                    <th>사용 횟수</th>
-                    <th>남은 횟수</th>
-                    <th>관리</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+            try {
+                // 데이터 한꺼번에 가져오기
+                const [studentsRes, slotsRes, reservationsRes] = await Promise.all([
+                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
+                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
+                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?date=gte.${monthKey}-01&date=lte.${monthKey}-31`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
+                ]);
 
-            students.forEach(student => {
-                // 이 학생의 이번 달 설정값 찾기
-                const slotInfo = slotsData.find(s => s.student_id === student.id);
-                const allowed = slotInfo ? slotInfo.allowed_slots : 0;
+                const students = await studentsRes.json();
+                const slotsData = await slotsRes.json();
+                const reservations = await reservationsRes.json();
 
-                // 이 학생의 이번 달 예약 개수(사용 횟수) 계산
-                const used = reservations.filter(r => r.student_id === student.id).length;
-                const remaining = allowed - used;
-
-                html += `
-            <tr>
-                <td><strong>${student.Name}</strong> <span class="student-id">#${student.id}</span></td>
-                <td>
-                    <input type="number" id="input-allowed-${student.id}" value="${allowed}" class="slot-input"> 회
-                </td>
-                <td><span class="count-used">${used}회</span></td>
-                <td><span class="count-remaining ${remaining < 0 ? 'warning' : ''}">${remaining}회</span></td>
-                <td>
-                    <button onclick="updateMonthlySlot('${student.id}')" class="btn-save">수정</button>
-                    <button onclick="deleteStudent('${student.id}', '${student.Name}')" class="btn-del">삭제</button>
-                </td>
-            </tr>
+                // 테이블 생성
+                let html = `
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>이름</th>
+                        <th>부여 횟수</th>
+                        <th>사용</th>
+                        <th>잔여</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody>
         `;
-            });
 
-            html += `</tbody></table>`;
-            container.innerHTML = html;
+                students.forEach(student => {
+                    const slot = slotsData.find(s => s.student_id === student.id);
+                    const allowed = slot ? slot.allowed_slots : 0;
+                    const used = reservations.filter(r => r.student_id === student.id).length;
+                    const remaining = allowed - used;
+
+                    html += `
+                <tr>
+                    <td><strong>${student.Name}</strong></td>
+                    <td>
+                        <input type="number" id="input-allowed-${student.id}" value="${allowed}" class="slot-input"> 회
+                    </td>
+                    <td class="count-used">${used}회</td>
+                    <td class="count-remaining ${remaining < 0 ? 'warning' : ''}">${remaining}회</td>
+                    <td>
+                        <button onclick="updateMonthlySlot(${student.id})" class="btn-save">저장</button>
+                    </td>
+                </tr>
+            `;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+
+            } catch (err) {
+                console.error("대시보드 로드 실패:", err);
+                container.innerHTML = "<p>데이터를 불러오는 중 오류가 발생했습니다.</p>";
+            }
         }
 
         function renderStudentManagement(students, monthlySlots, currentMonthKey) {
@@ -678,6 +683,13 @@
             </div>
             <div id="admin-calendar-grid" class="calendar-grid">
             </div>
+        </div>
+    </div>
+
+    <div id="admin-table-section" style="margin-top: 30px;">
+        <h3 style="text-align: center;">👥 학생 수업 횟수 관리</h3>
+        <div id="student-management-container">
+            <p style="text-align: center; color: #666;">데이터를 불러오는 중...</p>
         </div>
     </div>
 
