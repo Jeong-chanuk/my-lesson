@@ -542,7 +542,10 @@
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation' // 생성된 데이터를 바로 받아오기 위함
                     },
-                    body: JSON.stringify({ Name: name })
+                    body: JSON.stringify({
+                        Name: name,
+                        total_slots: 0
+                    })
                 });
 
                 if (!res.ok) {
