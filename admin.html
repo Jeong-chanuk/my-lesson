@@ -333,6 +333,11 @@
                 const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayRes = reservations.filter(r => r.lesson_date === dateStr);
                 const resHtml = dayRes.map(r => `<div class="res-item" onclick="deleteRes('${r.id}')">${r.lesson_time} ${r.student_id}</div>`).join('');
+                const resHtml = dayRes.map(r => {
+                    const student = students.find(s => s.id === Number(r.student_id));
+                    const studentName = student ? student.Name : "알 수 없음"; // 이름을 찾으면 출력, 없으면 ID 표시
+                    return `<div class="res-item" onclick="deleteRes('${r.id}')">${r.lesson_time} ${studentName}</div>`;
+                }).join('');
                 grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${resHtml}</div>`;
             }
         }
