@@ -1,701 +1,195 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>수업 관리자 모드</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --blue: #339af0;
-            --red: #ff6b6b;
-            --gray: #f8f9fa;
-        }
+        :root { --blue: #339af0; --red: #ff6b6b; --gray: #f8f9fa; }
+        body { font-family: 'Noto Sans KR', sans-serif; background: var(--gray); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .admin-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); width: 100%; max-width: 500px; margin-bottom: 20px; }
+        h2, h3 { color: var(--blue); margin-top: 0; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: var(--blue); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
+        /* 테이블 스타일 */
+        .admin-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; margin-top: 10px; }
+        .admin-table th { background: #f1f3f5; padding: 12px; font-size: 13px; border-bottom: 2px solid #dee2e6; }
+        .admin-table td { padding: 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }
+        .slot-input { width: 45px; padding: 5px; text-align: center; border: 1px solid #ddd; border-radius: 5px; }
+        .btn-save { background: #28a745; padding: 6px 10px; font-size: 12px; width: auto; margin: 0; }
+        .btn-del { background: #dc3545; padding: 6px 10px; font-size: 12px; width: auto; margin: 0; }
 
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background: var(--gray);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .admin-card {
-            background: white;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-            width: 100%;
-            max-width: 500px;
-        }
-
-        h2 {
-            margin-top: 0;
-            color: var(--blue);
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        input,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            background: var(--blue);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        .schedule-list {
-            margin-top: 30px;
-            width: 100%;
-            max-width: 500px;
-        }
-
-        .schedule-item {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-        }
-
-        .status-on {
-            color: var(--blue);
-            font-weight: bold;
-        }
-
-        .status-off {
-            color: #aaa;
-            text-decoration: line-through;
-        }
-
-        .del-btn {
-            background: var(--red);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            width: auto;
-            margin: 0;
-        }
-
-        /* 1. 전체 격자 설정: 7열로 강제 고정 */
-        #admin-calendar-grid {
-            display: grid !important;
-            grid-template-columns: repeat(7, 1fr) !important;
-            gap: 1px;
-            background-color: #dee2e6;
-            border: 1px solid #dee2e6;
-            margin-top: 20px;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        /* 2. 날짜 칸 설정: 6명 예약을 위해 세로 길이를 충분히 확보 */
-        .calendar-day {
-            background-color: #fff;
-            min-height: 160px;
-            /* 기본 길이를 넉넉하게 160px로 설정 */
-            height: auto;
-            /* 6명 넘어가면 자동으로 더 길어짐 */
-            padding: 6px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        /* 1. 예약 뱃지: 아주 얇고 진한 파란색 스타일 */
-        .admin-res-badge {
-            background-color: #e7f5ff !important;
-            /* 연한 파랑 배경 */
-            color: #0056b3 !important;
-            /* 진한 파랑 글자 */
-            border-left: 3px solid #0056b3 !important;
-            /* 왼쪽 강조 선 */
-
-            /* 크기 조절의 핵심: 여백을 최소화합니다 */
-            padding: 1px 4px !important;
-            margin: 1px 0 !important;
-            font-size: 11px !important;
-            /* 글자 크기를 작게 */
-            line-height: 1.2 !important;
-            /* 줄 간격을 좁게 */
-
-            border-radius: 3px !important;
-            display: flex !important;
-            align-items: center !important;
-            white-space: nowrap;
-            /* 한 줄로 표시 */
-            overflow: hidden;
-            text-overflow: ellipsis;
-            /* 이름 길면 점표시(...) */
-            cursor: default;
-        }
-
-        /* 2. 시간 텍스트만 더 진하게 강조 */
-        .res-time {
-            font-weight: 800 !important;
-            margin-right: 4px !important;
-            color: #004085 !important;
-        }
-
-        /* 3. 날짜 칸 자체의 세로 길이 확보 */
-        .calendar-day {
-            min-height: 160px !important;
-            /* 6명 예약을 다 보여주기 위한 높이 */
-            padding: 4px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 1px !important;
-            /* 뱃지 사이 간격을 최소화 */
-        }
-
-        /* 4. 요일 이름 (일~토) */
-        .calendar-header {
-            background-color: #f8f9fa;
-            font-weight: bold;
-            text-align: center;
-            padding: 10px 0;
-            font-size: 13px;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
-
-
-            width: fit-content !important;
-            /* 👈 핵심: 글자 길이에 딱 맞게 너비를 제한함 */
-            align-self: flex-start !important;
-            /* 👈 핵심: 왼쪽 정렬하며 늘어나지 않게 함 */
-
-            /* 혹시 몰라 한 번 더 확인하는 슬림 설정 */
-            padding: 1px 5px !important;
-            margin: 1px 0 !important;
-            min-height: 18px !important;
-            /* 너무 얇아지는 것 방지 */
-        }
-
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .admin-table th,
-        .admin-table td {
-            padding: 12px 15px;
-            text-align: center;
-            border-bottom: 1px solid #eee;
-        }
-
-        .admin-table th {
-            background-color: #f8f9fa;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .slot-input {
-            width: 50px;
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            text-align: center;
-        }
-
-        .student-id {
-            color: #999;
-            font-size: 0.8em;
-        }
-
-        .count-used {
-            color: #007bff;
-            font-weight: bold;
-        }
-
-        .count-remaining.warning {
-            color: #dc3545;
-            font-weight: bold;
-        }
-
-        /* 횟수 초과 시 빨간색 */
-
-        .btn-save {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .btn-del {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 5px;
-        }
+        /* 달력 스타일 */
+        #admin-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #dee2e6; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; width: 100%; max-width: 800px; }
+        .calendar-header { background: #f8f9fa; font-weight: bold; text-align: center; padding: 10px; font-size: 12px; }
+        .calendar-day { background: white; min-height: 100px; padding: 5px; display: flex; flex-direction: column; gap: 2px; }
+        .day-number { font-weight: bold; font-size: 12px; margin-bottom: 5px; }
+        .admin-res-badge { background: #e7f5ff; color: #0056b3; border-left: 3px solid #0056b3; padding: 2px 4px; font-size: 11px; border-radius: 3px; cursor: pointer; margin-bottom: 2px; }
     </style>
 </head>
-
 <body>
 
     <div class="admin-card">
-        <h2>📅 수업 시간표 관리 (버튼식)</h2>
+        <h2>📅 수업 시간표 개설</h2>
         <div class="input-group">
             <label>날짜 선택</label>
             <input type="date" id="lesson-date" onchange="fetchDaySchedules()">
         </div>
+        <div id="time-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;"></div>
+    </div>
 
-        <label style="margin-bottom: 10px; display: block;">시간 설정 (파란색: 활성화 / 회색: 비활성화)</label>
-        <div id="time-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+    <div class="admin-card" style="max-width: 800px;">
+        <h3>🗓️ 전체 예약 현황</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <button onclick="changeAdminMonth(-1)" style="width:auto; padding:5px 15px;">◀</button>
+            <h3 id="admin-current-month" style="margin:0;">2025년 12월</h3>
+            <button onclick="changeAdminMonth(1)" style="width:auto; padding:5px 15px;">▶</button>
         </div>
+        <div id="admin-calendar-grid"></div>
     </div>
 
-    <div class="schedule-list" id="schedule-list" style="margin-top: 30px;">
-        <h3>현재 날짜 오픈된 수업 목록</h3>
-        <div id="day-list-content"></div>
-    </div>
-
-    <script>
-        let currentMonthKey = ""; // 현재 선택된 월을 저장할 전역 변수
-        const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
-
-        // 1. 페이지 로드 시 실행
-        window.addEventListener('load', () => {
-            loadAdminDashboard();
-        });
-
-        // 09:00 ~ 23:00 시간 배열 생성
-        const timeSlots = Array.from({ length: 15 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`);
-
-        // 해당 날짜의 스케줄을 불러와 버튼 상태를 결정합니다.
-        async function fetchDaySchedules() {
-            const date = document.getElementById('lesson-date').value;
-            if (!date) return;
-
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?lesson_date=eq.${date}`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-            });
-            const currentSchedules = await res.json();
-            renderTimeGrid(currentSchedules, date);
-        }
-
-        function renderTimeGrid(currentSchedules, date) {
-            const grid = document.getElementById('time-grid');
-            const listContent = document.getElementById('day-list-content');
-            if (!grid || !listContent) return;
-
-            grid.innerHTML = '';
-            listContent.innerHTML = '';
-
-            timeSlots.forEach(time => {
-                const schedule = currentSchedules.find(s => s.lesson_time === time);
-                const btn = document.createElement('button');
-
-                btn.innerText = time;
-                btn.style.padding = "10px";
-                btn.style.borderRadius = "8px";
-                btn.style.border = "none";
-                btn.style.cursor = "pointer";
-                btn.style.fontWeight = "bold";
-
-                if (schedule) {
-                    btn.style.background = "#339af0";
-                    btn.style.color = "white";
-                    if (!schedule.is_available) {
-                        btn.style.background = "#ff6b6b";
-                        btn.innerText += " (마감)";
-                    }
-                } else {
-                    btn.style.background = "#eee";
-                    btn.style.color = "#666";
-                }
-
-                btn.onclick = () => toggleSchedule(date, time, schedule);
-                grid.appendChild(btn);
-
-                if (schedule) {
-                    const item = document.createElement('div');
-                    item.style = "padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;";
-                    item.innerHTML = `<span>${time} - ${schedule.is_available ? '예약 가능' : '예약 완료'}</span>`;
-                    listContent.appendChild(item);
-                }
-            });
-        }
-
-        async function toggleSchedule(date, time, existingSchedule) {
-            if (existingSchedule) {
-                if (!existingSchedule.is_available) return alert("이미 예약된 수업은 취소를 먼저 하세요.");
-                await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules?id=eq.${existingSchedule.id}`, {
-                    method: 'DELETE',
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-                });
-            } else {
-                await fetch(`${SUPABASE_URL}/rest/v1/ClassSchedules`, {
-                    method: 'POST',
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lesson_date: date, lesson_time: time, is_available: true })
-                });
-            }
-            fetchDaySchedules();
-        }
-
-        let adminCurrentDate = new Date();
-        let allReservations = [];
-
-        // 관리자 대시보드 로드 및 표 렌더링
-        async function loadAdminDashboard() {
-            const calendarMonthText = document.getElementById('admin-current-month').innerText; // "2025년 12월"
-            const match = calendarMonthText.match(/(\d+)년 (\d+)월/);
-            if (!match) return;
-
-            const year = match[1];
-            const month = match[2].padStart(2, '0');
-            currentMonthKey = `${year}-${month}`; // 전역 변수 업데이트
-
-            const tableContainer = document.getElementById('student-management-container');
-            if (!tableContainer) return;
-
-            try {
-                // 데이터 동시 로드 (Students, MonthlySlots, Reservations)
-                const [studentsRes, slotsRes, reservationsRes] = await Promise.all([
-                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${currentMonthKey}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?date=gte.${currentMonthKey}-01&date=lte.${currentMonthKey}-31`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
-                ]);
-
-                const students = await studentsRes.json();
-                const slotsData = await slotsRes.json();
-                const reservations = await reservationsRes.json();
-
-                // 관리자 표 생성
-                let html = `
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>학생 이름</th>
-                        <th>부여 횟수</th>
-                        <th>사용</th>
-                        <th>잔여</th>
-                        <th>관리</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-                students.forEach(student => {
-                    const slot = slotsData.find(s => s.student_id === student.id);
-                    const allowed = slot ? slot.allowed_slots : 0;
-                    const used = reservations.filter(r => r.student_id === student.id).length;
-                    const remaining = allowed - used;
-
-                    html += `
-                <tr>
-                    <td><strong>${student.Name}</strong></td>
-                    <td>
-                        <input type="number" id="input-allowed-${student.id}" value="${allowed}" class="slot-input"> 회
-                    </td>
-                    <td class="count-used">${used}회</td>
-                    <td class="count-remaining ${remaining < 0 ? 'warning' : ''}">${remaining}회</td>
-                    <td>
-                        <button onclick="updateMonthlySlot(${student.id})" class="btn-save">저장</button>
-                        <button onclick="deleteStudent(${student.id}, '${student.Name}')" class="btn-del">삭제</button>
-                    </td>
-                </tr>
-            `;
-                });
-
-                html += `</tbody></table>`;
-                tableContainer.innerHTML = html;
-
-                // 캘린더도 함께 업데이트 (기존 로직 유지)
-                allReservations = reservations;
-                renderAdminCalendar();
-
-            } catch (err) {
-                console.error("대시보드 로드 실패:", err);
-                tableContainer.innerHTML = `<p style="color:red; text-align:center;">데이터 로드 실패: ${err.message}</p>`;
-            }
-        }
-
-        // 3. 횟수 수정 함수
-        async function updateMonthlySlot(studentId) {
-            const valInput = document.getElementById(`input-allowed-${studentId}`);
-            if (!valInput) return;
-
-            const newValue = parseInt(valInput.value);
-
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'resolution=merge-duplicates'
-                    },
-                    body: JSON.stringify({
-                        student_id: studentId,
-                        month_key: currentMonthKey,
-                        allowed_slots: newValue
-                    })
-                });
-
-                if (res.ok) {
-                    alert("수정되었습니다.");
-                    loadAdminDashboard();
-                } else {
-                    alert("저장 실패");
-                }
-            } catch (err) {
-                alert("에러 발생");
-            }
-        }
-
-        // 4. 달 이동 함수 수정
-        function changeAdminMonth(offset) {
-            adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
-            // 달력 텍스트 업데이트 후 대시보드 리로드
-            const year = adminCurrentDate.getFullYear();
-            const month = adminCurrentDate.getMonth() + 1;
-            document.getElementById('admin-current-month').innerText = `${year}년 ${month}월`;
-            loadAdminDashboard();
-        }
-        function renderAdminCalendar() {
-            const grid = document.getElementById('admin-calendar-grid');
-            const monthText = document.getElementById('admin-current-month');
-            if (!grid || !monthText) return;
-
-            grid.innerHTML = '';
-            const year = adminCurrentDate.getFullYear();
-            const month = adminCurrentDate.getMonth();
-            monthText.innerText = `${year}년 ${month + 1}월`;
-
-            // 2. 요일 헤더를 새로 만듭니다.
-            const days = ['일', '월', '화', '수', '목', '금', '토'];
-            days.forEach(d => {
-                const h = document.createElement('div');
-                h.className = 'calendar-header';
-                h.innerText = d;
-                grid.appendChild(h);
-            });
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const lastDate = new Date(year, month + 1, 0).getDate();
-
-            // [2] 빈 칸 채우기 부분 수정
-            for (let i = 0; i < firstDay; i++) {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.className = 'calendar-day empty'; // 👈 테두리가 생기도록 클래스 추가
-                grid.appendChild(emptyDiv);
-            }
-
-            for (let d = 1; d <= lastDate; d++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'calendar-day';
-                dayDiv.innerHTML = `<div class="day-number">${d}</div>`;
-
-                const dayRes = allReservations.filter(r => r.lesson_date === dateStr);
-                dayRes.sort((a, b) => a.lesson_time.localeCompare(b.lesson_time));
-
-                dayRes.forEach(res => {
-                    const badge = document.createElement('div');
-                    badge.className = 'admin-res-badge';
-
-                    // [추가] 클릭하면 삭제 함수가 실행되도록 연결
-                    const displayName = res.student_name || `ID:${res.student_id}`;
-                    badge.onclick = () => deleteReservation(res.id, displayName);
-                    badge.style.cursor = 'pointer'; // 클릭 가능하다는 표시
-
-                    badge.innerHTML = `
-        <span class="res-time">${res.lesson_time}</span>
-        <span>${displayName}</span>
-    `;
-                    dayDiv.appendChild(badge);
-                });
-                grid.appendChild(dayDiv);
-            }
-        } // <--- renderAdminCalendar 함수가 여기서 정확히 닫혀야 합니다.
-
-        async function deleteReservation(resId, studentName) {
-            // 1. 실수로 지우는 것을 방지하기 위한 확인창
-            if (!confirm(`[${studentName}] 학생의 예약을 강제로 취소하시겠습니까?`)) return;
-
-            try {
-                // 2. Supabase DELETE 요청
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${resId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (res.ok) {
-                    alert("예약이 정상적으로 취소되었습니다.");
-                    // 3. 데이터 다시 불러와서 화면 갱신
-                    loadAdminDashboard();
-                } else {
-                    const errorData = await res.json();
-                    throw new Error(errorData.message || "삭제 실패");
-                }
-            } catch (err) {
-                console.error("삭제 중 오류:", err);
-                alert("예약 취소 중 오류가 발생했습니다: " + err.message);
-            }
-        }
-
-        function changeAdminMonth(offset) {
-            adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
-            loadAdminDashboard();
-        }
-
-        window.addEventListener('load', () => {
-            loadAdminDashboard();
-        });
-
-        async function addNewStudent() {
-            const name = document.getElementById('new-student-name').value;
-            const slots = document.getElementById('initial-slots').value; // 초기 부여 횟수
-
-            try {
-                // 1단계: Students 테이블에는 'Name'만 저장 (id는 자동생성)
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/Students`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
-                    body: JSON.stringify({ Name: name }) // 더 이상 slots를 보내지 않음!
-                });
-
-                const addedStudent = await res.json();
-                const newId = addedStudent[0].id;
-
-                // 2단계: 부여된 횟수는 MonthlySlots 테이블에 저장
-                await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        student_id: newId,
-                        month_key: currentMonthKey, // 현재 관리 중인 달 (예: "2024-05")
-                        allowed_slots: parseInt(slots)
-                    })
-                });
-
-                alert(`${name} 학생 등록 및 ${slots}회 부여 완료!`);
-                loadAdminDashboard();
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        async function deleteStudent(studentId, studentName) {
-            if (!confirm(`${studentName} 학생을 정말 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.`)) return;
-
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${studentId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`
-                    }
-                });
-
-                if (res.ok) {
-                    alert("삭제되었습니다.");
-                    loadAdminDashboard();
-                }
-            } catch (err) {
-                alert("삭제 실패");
-            }
-        }
-    </script>
-
-    <div class="container">
-        <div class="card">
-            <h2>📅 수업 시간표 개설</h2>
-        </div>
-    </div>
-
-    <div class="container" style="margin-top: 30px; max-width: 1000px;">
-        <div class="card">
-            <h2>📅 전체 수업 및 예약 현황</h2>
-            <div id="admin-calendar-header"
-                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <button onclick="changeAdminMonth(-1)">◀</button>
-                <h3 id="admin-current-month">2025년 12월</h3>
-                <button onclick="changeAdminMonth(1)">▶</button>
-            </div>
-            <div id="admin-calendar-grid" class="calendar-grid">
-            </div>
-        </div>
-    </div>
-
-    <div id="admin-table-section" style="margin-top: 30px;">
-        <h3 style="text-align: center;">👥 학생 수업 횟수 관리</h3>
+    <div class="admin-card" style="max-width: 600px;">
+        <h3>👥 학생 수업 횟수 관리</h3>
         <div id="student-management-container">
             <p style="text-align: center; color: #666;">데이터를 불러오는 중...</p>
         </div>
-    </div>
-
-    <div class="admin-controls" style="margin-bottom: 20px; padding: 15px; background: #f4f4f4; border-radius: 8px;">
-        <h4>새 학생 등록</h4>
-        <input type="text" id="new-student-name" placeholder="학생 이름 입력">
-        <input type="number" id="initial-slots" value="4" style="width: 50px;"> 회
-        <button onclick="addNewStudent()"
-            style="background: #28a745; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer;">학생
-            추가</button>
-    </div>
-
-    <div class="container" style="margin-top: 20px;">
-        <div id="schedule-list"></div>
-    </div>
-    <div id="admin-calendar-grid"></div>
-    </div>
-    <section id="student-management" style="margin-top: 40px; padding: 20px; border-top: 2px solid #eee;">
-        <h3>👥 학생 수업 횟수 관리</h3>
-        <div id="student-list-container">
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+        <h4>➕ 새 학생 등록</h4>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="new-student-name" placeholder="학생 이름">
+            <input type="number" id="initial-slots" value="4" style="width: 80px;">
+            <button onclick="addNewStudent()" style="width: auto; margin: 0; background: #28a745;">추가</button>
         </div>
-    </section>
-</body>
+    </div>
 
+    <script>
+        const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
+        let adminCurrentDate = new Date();
+        let currentMonthKey = "";
+
+        // 1. 초기 로드
+        window.onload = () => {
+            updateMonthDisplay();
+            loadAdminDashboard();
+        };
+
+        function updateMonthDisplay() {
+            const year = adminCurrentDate.getFullYear();
+            const month = adminCurrentDate.getMonth() + 1;
+            document.getElementById('admin-current-month').innerText = `${year}년 ${month}월`;
+            currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        }
+
+        async function loadAdminDashboard() {
+            const container = document.getElementById('student-management-container');
+            try {
+                // 400 에러 방지를 위해 날짜 필터링 수정
+                const lastDay = new Date(adminCurrentDate.getFullYear(), adminCurrentDate.getMonth() + 1, 0).getDate();
+                const start = `${currentMonthKey}-01`;
+                const end = `${currentMonthKey}-${lastDay}`;
+
+                const [stdRes, slotRes, resRes] = await Promise.all([
+                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
+                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${currentMonthKey}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
+                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${start}&lesson_date=lte.${end}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
+                ]);
+
+                const students = await stdRes.json();
+                const slotsData = await slotRes.json();
+                const reservations = await resRes.json();
+
+                // 학생 관리 테이블 렌더링
+                let html = `<table class="admin-table"><thead><tr><th>이름</th><th>부여</th><th>사용</th><th>잔여</th><th>관리</th></tr></thead><tbody>`;
+                students.forEach(s => {
+                    const slot = slotsData.find(sl => sl.student_id === s.id);
+                    const allowed = slot ? slot.allowed_slots : 0;
+                    const used = Array.isArray(reservations) ? reservations.filter(r => r.student_id === s.id).length : 0;
+                    const remain = allowed - used;
+                    html += `<tr>
+                        <td><strong>${s.Name}</strong></td>
+                        <td><input type="number" id="slot-${s.id}" value="${allowed}" class="slot-input"></td>
+                        <td style="color:blue">${used}</td>
+                        <td style="font-weight:bold; color:${remain < 0 ? 'red' : 'black'}">${remain}</td>
+                        <td><button onclick="updateMonthlySlot(${s.id})" class="btn-save">저장</button></td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+
+                renderCalendar(reservations);
+            } catch (e) {
+                container.innerHTML = "오류 발생: " + e.message;
+            }
+        }
+
+        function renderCalendar(reservations) {
+            const grid = document.getElementById('admin-calendar-grid');
+            grid.innerHTML = '';
+            ['일','월','화','수','목','금','토'].forEach(d => grid.innerHTML += `<div class="calendar-header">${d}</div>`);
+
+            const year = adminCurrentDate.getFullYear();
+            const month = adminCurrentDate.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="calendar-day"></div>`;
+            for (let d = 1; d <= lastDate; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayRes = Array.isArray(reservations) ? reservations.filter(r => r.lesson_date === dateStr) : [];
+                let resHtml = dayRes.map(r => `<div class="admin-res-badge" onclick="deleteRes(${r.id})">${r.lesson_time} ${r.student_name || '학생'}</div>`).join('');
+                grid.innerHTML += `<div class="calendar-day"><div class="day-number">${d}</div>${resHtml}</div>`;
+            }
+        }
+
+        async function addNewStudent() {
+            const name = document.getElementById('new-student-name').value;
+            const slots = document.getElementById('initial-slots').value;
+            if(!name) return alert("이름을 입력하세요.");
+
+            // 오류의 핵심: Students 테이블의 total_slots 제약조건 회피를 위해 0이라도 보냄
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/Students`, {
+                method: 'POST',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                body: JSON.stringify({ Name: name, total_slots: 0 }) 
+            });
+            const data = await res.json();
+            if(res.ok) {
+                await updateMonthlySlot(data[0].id, slots);
+                alert("등록 완료!");
+                loadAdminDashboard();
+            }
+        }
+
+        async function updateMonthlySlot(sid, val) {
+            const count = val || document.getElementById(`slot-${sid}`).value;
+            await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
+                method: 'POST',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({ student_id: sid, month_key: currentMonthKey, allowed_slots: parseInt(count) })
+            });
+            if(!val) alert("저장되었습니다.");
+            loadAdminDashboard();
+        }
+
+        function changeAdminMonth(offset) {
+            adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
+            updateMonthDisplay();
+            loadAdminDashboard();
+        }
+
+        async function deleteRes(rid) {
+            if(!confirm("예약을 삭제하시겠습니까?")) return;
+            await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${rid}`, {
+                method: 'DELETE',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            loadAdminDashboard();
+        }
+    </script>
+</body>
 </html>
