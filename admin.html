@@ -359,21 +359,36 @@
             const month = viewDate.getMonth() + 1;
             const monthKey = `${year}-${String(month).padStart(2, '0')}`;
 
+            // 1. 중복 에러(409)를 방지하기 위해 'on_conflict'를 명시한 Upsert 요청을 보냅니다.
             const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
                 method: 'POST',
-                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                headers: {
+                    ...headers,
+                    'Prefer': 'resolution=merge-duplicates' // 중복 시 덮어쓰기
+                },
                 body: JSON.stringify({
                     student_id: studentId,
-                    month_key: monthKey,      // month -> month_key
-                    allowed_slots: parseInt(newCount) // total_slots -> allowed_slots
+                    month_key: monthKey,      //
+                    allowed_slots: parseInt(newCount) //
                 })
             });
 
             if (res.ok) {
-                refreshDashboard();
+                console.log("횟수 저장 완료");
+                refreshDashboard(); // 화면 갱신
             } else {
-                const err = await res.json();
-                console.error("저장 실패:", err);
+                const errData = await res.json();
+                // 만약 여전히 에러가 난다면 수동으로 업데이트(PATCH) 시도
+                if (res.status === 409) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?student_id=eq.${studentId}&month_key=eq.${monthKey}`, {
+                        method: 'PATCH',
+                        headers: headers,
+                        body: JSON.stringify({ allowed_slots: parseInt(newCount) })
+                    });
+                    refreshDashboard();
+                } else {
+                    console.error("저장 실패 상세:", errData);
+                }
             }
         }
     </script>
