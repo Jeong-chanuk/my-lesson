@@ -247,21 +247,17 @@
             try {
                 const [stdRes, slotRes, resRes] = await Promise.all([
                     fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, { headers }),
-                    // month -> month_key 로 수정
                     fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers }),
                     fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers })
                 ]);
 
-                const students = await stdRes.json();
-                const rawSlots = await slotRes.json();
-                const rawRes = await resRes.json();
-
-                // 400 에러 시에도 빈 배열로 처리하여 'find is not a function' 에러 방지
-                const monthlySlots = Array.isArray(rawSlots) ? rawSlots : [];
-                const reservations = Array.isArray(rawRes) ? rawRes : [];
+                const students = (await stdRes.json()) || [];
+                const monthlySlots = (await slotRes.json()) || [];
+                const reservations = (await resRes.json()) || [];
 
                 renderStudentTable(students, monthlySlots, reservations);
-                if (typeof renderCalendar === 'function') renderCalendar(reservations);
+                // ★ 여기서 students를 두 번째 인자로 반드시 넘겨줘야 합니다!
+                renderCalendar(reservations, students);
             } catch (e) {
                 console.error("데이터 갱신 중 오류:", e);
             }
@@ -324,7 +320,7 @@
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
 
-            // 요일 헤더 생성
+            // 요일 헤더
             ['일', '월', '화', '수', '목', '금', '토'].forEach(d => {
                 grid.innerHTML += `<div class="cal-header">${d}</div>`;
             });
@@ -332,28 +328,27 @@
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const lastDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
-            // 1일 앞의 빈칸 생성
             for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="cal-day"></div>`;
 
-            // 날짜별 칸 생성
+            // 학생 데이터가 없을 경우를 대비한 안전장치
+            const safeStudents = Array.isArray(students) ? students : [];
+
             for (let d = 1; d <= lastDate; d++) {
                 const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-
-                // 해당 날짜의 예약 필터링
                 const dayRes = Array.isArray(reservations) ? reservations.filter(r => r.lesson_date === dateStr) : [];
 
-                // 중요: 변수 중복 에러를 방지하기 위해 이름을 고유하게(renderResHtml) 지정함
-                const renderResHtml = dayRes.map(r => {
-                    // 학생 ID(숫자)로 학생 이름 찾기
-                    const student = students.find(s => s.id === Number(r.student_id));
-                    const displayName = student ? student.Name : r.student_id; // 이름 없으면 ID 표시
+                // resHtml 변수 중복 에러 방지
+                const calendarItemHtml = dayRes.map(r => {
+                    // ID로 이름 찾기
+                    const student = safeStudents.find(s => s.id === Number(r.student_id));
+                    const nameToShow = student ? student.Name : r.student_id;
 
                     return `<div class="res-item" onclick="deleteRes('${r.id}')">
-                        ${r.lesson_time} ${displayName}
+                        ${r.lesson_time} ${nameToShow}
                     </div>`;
                 }).join('');
 
-                grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${renderResHtml}</div>`;
+                grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${calendarItemHtml}</div>`;
             }
         }
         async function deleteRes(id) {
