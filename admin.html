@@ -3,32 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수업 관리자 모드</title>
+    <title>수업 관리자 모드 - 통합본</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --blue: #339af0; --red: #ff6b6b; --gray: #f8f9fa; }
+        :root { --blue: #339af0; --red: #ff6b6b; --gray: #f8f9fa; --green: #28a745; }
         body { font-family: 'Noto Sans KR', sans-serif; background: var(--gray); padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .admin-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); width: 100%; max-width: 500px; margin-bottom: 20px; }
-        h2, h3 { color: var(--blue); margin-top: 0; }
+        .admin-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); width: 100%; max-width: 600px; margin-bottom: 20px; }
+        h2, h3 { color: var(--blue); margin-top: 0; text-align: center; }
         .input-group { margin-bottom: 15px; }
         label { display: block; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
         input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: var(--blue); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button { width: 100%; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.8; }
         
-        /* 테이블 스타일 */
-        .admin-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; margin-top: 10px; }
-        .admin-table th { background: #f1f3f5; padding: 12px; font-size: 13px; border-bottom: 2px solid #dee2e6; }
-        .admin-table td { padding: 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }
-        .slot-input { width: 45px; padding: 5px; text-align: center; border: 1px solid #ddd; border-radius: 5px; }
-        .btn-save { background: #28a745; padding: 6px 10px; font-size: 12px; width: auto; margin: 0; }
-        .btn-del { background: #dc3545; padding: 6px 10px; font-size: 12px; width: auto; margin: 0; }
+        /* 시간표 개설 그리드 */
+        .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; }
+        .time-btn { padding: 10px; background: #eee; color: #333; border-radius: 8px; font-size: 13px; text-align: center; cursor: pointer; border: 1px solid transparent; }
+        .time-btn.active { background: var(--blue); color: white; }
 
-        /* 달력 스타일 */
-        #admin-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #dee2e6; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; width: 100%; max-width: 800px; }
-        .calendar-header { background: #f8f9fa; font-weight: bold; text-align: center; padding: 10px; font-size: 12px; }
-        .calendar-day { background: white; min-height: 100px; padding: 5px; display: flex; flex-direction: column; gap: 2px; }
-        .day-number { font-weight: bold; font-size: 12px; margin-bottom: 5px; }
-        .admin-res-badge { background: #e7f5ff; color: #0056b3; border-left: 3px solid #0056b3; padding: 2px 4px; font-size: 11px; border-radius: 3px; cursor: pointer; margin-bottom: 2px; }
+        /* 테이블 스타일 */
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .admin-table th { background: #f1f3f5; padding: 10px; font-size: 13px; border-bottom: 2px solid #dee2e6; }
+        .admin-table td { padding: 10px; text-align: center; border-bottom: 1px solid #eee; font-size: 14px; }
+        .slot-input { width: 50px; padding: 5px; text-align: center; border: 1px solid #ddd; border-radius: 5px; }
+        
+        /* 달력 */
+        #calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #dee2e6; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        .cal-header { background: #f8f9fa; padding: 10px; text-align: center; font-weight: bold; font-size: 12px; }
+        .cal-day { background: white; min-height: 80px; padding: 5px; font-size: 11px; }
+        .res-item { background: #e7f5ff; color: #0056b3; padding: 2px; margin-top: 2px; border-radius: 3px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -39,156 +42,182 @@
             <label>날짜 선택</label>
             <input type="date" id="lesson-date" onchange="fetchDaySchedules()">
         </div>
-        <div id="time-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;"></div>
+        <div id="time-grid" class="time-grid"></div>
+        <p style="font-size: 12px; color: #666; text-align: center; margin-top: 10px;">* 시간을 클릭하여 활성화(파란색) 하세요.</p>
     </div>
 
-    <div class="admin-card" style="max-width: 800px;">
-        <h3>🗓️ 전체 예약 현황</h3>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <button onclick="changeAdminMonth(-1)" style="width:auto; padding:5px 15px;">◀</button>
-            <h3 id="admin-current-month" style="margin:0;">2025년 12월</h3>
-            <button onclick="changeAdminMonth(1)" style="width:auto; padding:5px 15px;">▶</button>
-        </div>
-        <div id="admin-calendar-grid"></div>
-    </div>
-
-    <div class="admin-card" style="max-width: 600px;">
+    <div class="admin-card">
         <h3>👥 학생 수업 횟수 관리</h3>
-        <div id="student-management-container">
-            <p style="text-align: center; color: #666;">데이터를 불러오는 중...</p>
+        <div id="student-list-container">
+            <p style="text-align: center;">데이터 로딩 중...</p>
         </div>
         <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
         <h4>➕ 새 학생 등록</h4>
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="new-student-name" placeholder="학생 이름">
-            <input type="number" id="initial-slots" value="4" style="width: 80px;">
-            <button onclick="addNewStudent()" style="width: auto; margin: 0; background: #28a745;">추가</button>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" id="new-name" placeholder="학생 이름">
+            <input type="number" id="new-slots" value="4" style="width: 80px;">
+            <button onclick="addNewStudent()" style="width: 100px; background: var(--green);">등록</button>
         </div>
+    </div>
+
+    <div class="admin-card">
+        <h3>🗓️ 전체 예약 현황</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <button onclick="moveMonth(-1)" style="width:auto; padding:5px 15px;">◀</button>
+            <span id="current-month-label" style="font-weight:bold;"></span>
+            <button onclick="moveMonth(1)" style="width:auto; padding:5px 15px;">▶</button>
+        </div>
+        <div id="calendar-grid"></div>
     </div>
 
     <script>
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
-        let adminCurrentDate = new Date();
-        let currentMonthKey = "";
+        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
-        // 1. 초기 로드
+        let viewDate = new Date();
+
         window.onload = () => {
-            updateMonthDisplay();
-            loadAdminDashboard();
+            initTimeGrid();
+            refreshDashboard();
         };
 
-        function updateMonthDisplay() {
-            const year = adminCurrentDate.getFullYear();
-            const month = adminCurrentDate.getMonth() + 1;
-            document.getElementById('admin-current-month').innerText = `${year}년 ${month}월`;
-            currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        // --- 1. 시간표 관리 기능 ---
+        function initTimeGrid() {
+            const grid = document.getElementById('time-grid');
+            const times = ["14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
+            grid.innerHTML = times.map(t => `<div class="time-btn" id="time-${t.replace(':','')}" onclick="toggleSchedule('${t}')">${t}</div>`).join('');
         }
 
-        async function loadAdminDashboard() {
-            const container = document.getElementById('student-management-container');
-            try {
-                // 400 에러 방지를 위해 날짜 필터링 수정
-                const lastDay = new Date(adminCurrentDate.getFullYear(), adminCurrentDate.getMonth() + 1, 0).getDate();
-                const start = `${currentMonthKey}-01`;
-                const end = `${currentMonthKey}-${lastDay}`;
+        async function fetchDaySchedules() {
+            const date = document.getElementById('lesson-date').value;
+            if(!date) return;
+            
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/Schedules?lesson_date=eq.${date}`, { headers });
+            const data = await res.json();
+            
+            document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+            data.forEach(s => {
+                const id = `time-${s.lesson_time.replace(':','')}`;
+                if(document.getElementById(id)) document.getElementById(id).classList.add('active');
+            });
+        }
 
-                const [stdRes, slotRes, resRes] = await Promise.all([
-                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${currentMonthKey}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${start}&lesson_date=lte.${end}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
-                ]);
+        async function toggleSchedule(time) {
+            const date = document.getElementById('lesson-date').value;
+            if(!date) return alert("날짜를 먼저 선택하세요.");
 
-                const students = await stdRes.json();
-                const slotsData = await slotRes.json();
-                const reservations = await resRes.json();
+            const btn = document.getElementById(`time-${time.replace(':','')}`);
+            const isActive = btn.classList.contains('active');
 
-                // 학생 관리 테이블 렌더링
-                let html = `<table class="admin-table"><thead><tr><th>이름</th><th>부여</th><th>사용</th><th>잔여</th><th>관리</th></tr></thead><tbody>`;
-                students.forEach(s => {
-                    const slot = slotsData.find(sl => sl.student_id === s.id);
-                    const allowed = slot ? slot.allowed_slots : 0;
-                    const used = Array.isArray(reservations) ? reservations.filter(r => r.student_id === s.id).length : 0;
-                    const remain = allowed - used;
-                    html += `<tr>
-                        <td><strong>${s.Name}</strong></td>
-                        <td><input type="number" id="slot-${s.id}" value="${allowed}" class="slot-input"></td>
-                        <td style="color:blue">${used}</td>
-                        <td style="font-weight:bold; color:${remain < 0 ? 'red' : 'black'}">${remain}</td>
-                        <td><button onclick="updateMonthlySlot(${s.id})" class="btn-save">저장</button></td>
-                    </tr>`;
+            if(!isActive) {
+                await fetch(`${SUPABASE_URL}/rest/v1/Schedules`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ lesson_date: date, lesson_time: time, is_active: true })
                 });
-                html += `</tbody></table>`;
-                container.innerHTML = html;
-
-                renderCalendar(reservations);
-            } catch (e) {
-                container.innerHTML = "오류 발생: " + e.message;
+            } else {
+                await fetch(`${SUPABASE_URL}/rest/v1/Schedules?lesson_date=eq.${date}&lesson_time=eq.${time}`, {
+                    method: 'DELETE', headers
+                });
             }
+            fetchDaySchedules();
         }
 
-        function renderCalendar(reservations) {
-            const grid = document.getElementById('admin-calendar-grid');
-            grid.innerHTML = '';
-            ['일','월','화','수','목','금','토'].forEach(d => grid.innerHTML += `<div class="calendar-header">${d}</div>`);
+        // --- 2. 학생 및 예약 관리 기능 ---
+        async function refreshDashboard() {
+            const monthKey = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}`;
+            document.getElementById('current-month-label').innerText = `${viewDate.getFullYear()}년 ${viewDate.getMonth()+1}월`;
 
-            const year = adminCurrentDate.getFullYear();
-            const month = adminCurrentDate.getMonth();
-            const firstDay = new Date(year, month, 1).getDay();
-            const lastDate = new Date(year, month + 1, 0).getDate();
+            const [stdRes, slotRes, resRes] = await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, { headers }),
+                fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers }),
+                fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=like.${monthKey}*`, { headers })
+            ]);
 
-            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="calendar-day"></div>`;
-            for (let d = 1; d <= lastDate; d++) {
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const dayRes = Array.isArray(reservations) ? reservations.filter(r => r.lesson_date === dateStr) : [];
-                let resHtml = dayRes.map(r => `<div class="admin-res-badge" onclick="deleteRes(${r.id})">${r.lesson_time} ${r.student_name || '학생'}</div>`).join('');
-                grid.innerHTML += `<div class="calendar-day"><div class="day-number">${d}</div>${resHtml}</div>`;
-            }
+            const students = await stdRes.json();
+            const slots = await slotRes.json();
+            const reservations = Array.isArray(await resRes.json()) ? await resRes.json() : [];
+
+            renderStudentTable(students, slots, reservations, monthKey);
+            renderCalendar(reservations);
+        }
+
+        function renderStudentTable(students, slots, reservations, monthKey) {
+            let html = `<table class="admin-table"><thead><tr><th>이름</th><th>부여</th><th>잔여</th><th>관리</th></tr></thead><tbody>`;
+            students.forEach(s => {
+                const slot = slots.find(sl => sl.student_id === s.id) || { allowed_slots: 0 };
+                const used = reservations.filter(r => r.student_id === s.id).length;
+                html += `<tr>
+                    <td>${s.Name}</td>
+                    <td><input type="number" id="input-${s.id}" value="${slot.allowed_slots}" class="slot-input"></td>
+                    <td style="font-weight:bold; color:${(slot.allowed_slots - used) < 0 ? 'red' : 'black'}">${slot.allowed_slots - used}</td>
+                    <td><button onclick="updateSlot(${s.id}, '${monthKey}')" style="padding:4px 8px; font-size:12px; width:auto;">저장</button></td>
+                </tr>`;
+            });
+            document.getElementById('student-list-container').innerHTML = html + `</tbody></table>`;
         }
 
         async function addNewStudent() {
-            const name = document.getElementById('new-student-name').value;
-            const slots = document.getElementById('initial-slots').value;
+            const name = document.getElementById('new-name').value;
+            const initialSlots = document.getElementById('new-slots').value;
             if(!name) return alert("이름을 입력하세요.");
 
-            // 오류의 핵심: Students 테이블의 total_slots 제약조건 회피를 위해 0이라도 보냄
+            // 오류 해결 포인트: total_slots에 0이라도 값을 넣어 보냄
             const res = await fetch(`${SUPABASE_URL}/rest/v1/Students`, {
                 method: 'POST',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                headers: { ...headers, 'Prefer': 'return=representation' },
                 body: JSON.stringify({ Name: name, total_slots: 0 }) 
             });
-            const data = await res.json();
+            
             if(res.ok) {
-                await updateMonthlySlot(data[0].id, slots);
-                alert("등록 완료!");
-                loadAdminDashboard();
+                const data = await res.json();
+                const monthKey = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}`;
+                await updateSlot(data[0].id, monthKey, initialSlots);
+                alert("학생이 등록되었습니다.");
+                refreshDashboard();
+            } else {
+                alert("등록 실패: DB 설정을 확인하세요.");
             }
         }
 
-        async function updateMonthlySlot(sid, val) {
-            const count = val || document.getElementById(`slot-${sid}`).value;
+        async function updateSlot(sid, monthKey, val) {
+            const count = val || document.getElementById(`input-${sid}`).value;
             await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
                 method: 'POST',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ student_id: sid, month_key: currentMonthKey, allowed_slots: parseInt(count) })
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({ student_id: sid, month_key: monthKey, allowed_slots: parseInt(count) })
             });
-            if(!val) alert("저장되었습니다.");
-            loadAdminDashboard();
+            if(!val) alert("변경되었습니다.");
+            refreshDashboard();
         }
 
-        function changeAdminMonth(offset) {
-            adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
-            updateMonthDisplay();
-            loadAdminDashboard();
+        function renderCalendar(reservations) {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            ['일','월','화','수','목','금','토'].forEach(d => grid.innerHTML += `<div class="cal-header">${d}</div>`);
+
+            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+            const lastDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+
+            for(let i=0; i<firstDay; i++) grid.innerHTML += `<div class="cal-day"></div>`;
+            for(let d=1; d<=lastDate; d++) {
+                const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayRes = reservations.filter(r => r.lesson_date === dateStr);
+                const resHtml = dayRes.map(r => `<div class="res-item" onclick="deleteRes(${r.id})">${r.lesson_time} ${r.student_name}</div>`).join('');
+                grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${resHtml}</div>`;
+            }
         }
 
         async function deleteRes(rid) {
-            if(!confirm("예약을 삭제하시겠습니까?")) return;
-            await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${rid}`, {
-                method: 'DELETE',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-            });
-            loadAdminDashboard();
+            if(!confirm("이 예약을 삭제할까요?")) return;
+            await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${rid}`, { method: 'DELETE', headers });
+            refreshDashboard();
+        }
+
+        function moveMonth(offset) {
+            viewDate.setMonth(viewDate.getMonth() + offset);
+            refreshDashboard();
         }
     </script>
 </body>
