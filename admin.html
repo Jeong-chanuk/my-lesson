@@ -545,7 +545,12 @@
                     body: JSON.stringify({ Name: name })
                 });
 
-                if (!res.ok) throw new Error("학생 등록 실패");
+                if (!res.ok) {
+                    const errorBody = await res.json();
+                    console.error("🔥 서버 응답 에러 상세:", errorBody);
+                    alert(`등록 실패: ${errorBody.message} (${errorBody.details})`);
+                    return; // 에러가 나면 여기서 멈춤
+                }
 
                 const addedStudent = await res.json();
                 const newId = addedStudent[0].id; // 방금 생성된 학생의 ID
