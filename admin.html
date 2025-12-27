@@ -247,24 +247,27 @@
             try {
                 const [stdRes, slotRes, resRes] = await Promise.all([
                     fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, { headers }),
-                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month=eq.${monthKey}`, { headers }),
+                    // month -> month_key 로 수정
+                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers }),
                     fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers })
                 ]);
 
                 const students = await stdRes.json();
-                const monthlySlots = await slotRes.json();
-                const reservations = await resRes.json();
+                const rawSlots = await slotRes.json();
+                const rawRes = await resRes.json();
+
+                // 400 에러 시에도 빈 배열로 처리하여 'find is not a function' 에러 방지
+                const monthlySlots = Array.isArray(rawSlots) ? rawSlots : [];
+                const reservations = Array.isArray(rawRes) ? rawRes : [];
 
                 renderStudentTable(students, monthlySlots, reservations);
-                renderCalendar(Array.isArray(reservations) ? reservations : []);
-            } catch (e) { console.error("데이터 갱신 중 오류:", e); }
+                if (typeof renderCalendar === 'function') renderCalendar(reservations);
+            } catch (e) {
+                console.error("데이터 갱신 중 오류:", e);
+            }
         }
 
         function renderStudentTable(students, monthlySlots, reservations) {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth() + 1;
-            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-
             let html = `
         <table class="admin-table">
             <thead>
@@ -278,12 +281,12 @@
             <tbody>`;
 
             students.forEach(s => {
-                // 1. 이번 달 배정된 횟수 찾기 (StudentMonthlySlots 테이블 기준)
-                const slotData = monthlySlots.find(m => m.student_id === s.id && m.month === monthKey);
-                const assigned = slotData ? slotData.total_slots : 0;
+                // total_slots -> allowed_slots 로 수정
+                const slotData = monthlySlots.find(m => m.student_id === s.id);
+                const assigned = slotData ? slotData.allowed_slots : 0;
 
-                // 2. 이번 달 실제 예약(사용) 횟수 계산 (Reservations 테이블 기준)
-                const used = reservations.filter(r => r.student_id === s.id && r.lesson_date.startsWith(monthKey)).length;
+                // 예약 데이터에서 학생 ID와 일치하는 개수 계산
+                const used = reservations.filter(r => Number(r.student_id) === s.id).length;
                 const remaining = assigned - used;
 
                 html += `
@@ -292,43 +295,18 @@
                 <td>
                     <input type="number" value="${assigned}" 
                            onchange="updateTotalSlots(${s.id}, this.value)" 
-                           style="width:50px; padding:5px; text-align:center;"> 회
+                           style="width:45px; text-align:center;"> 회
                 </td>
                 <td>
-                    <span style="color:var(--blue)">${used}</span> / 
-                    <span style="${remaining < 0 ? 'color:var(--red)' : ''}">${remaining}</span>
+                    <span style="color:#0056b3; font-weight:bold;">${used}</span> / 
+                    <span style="color:${remaining < 0 ? 'red' : 'black'}">${remaining}</span>
                 </td>
                 <td>
-                    <button onclick="delStudent(${s.id})" style="background:var(--red); padding:5px 10px; width:auto; font-size:11px;">삭제</button>
+                    <button onclick="delStudent(${s.id})" style="background:red; color:white; border:none; padding:4px 8px; border-radius:4px;">삭제</button>
                 </td>
             </tr>`;
             });
             document.getElementById('student-list-container').innerHTML = html + `</tbody></table>`;
-        }
-
-        // --- 횟수 업데이트 함수 추가 ---
-        async function updateTotalSlots(studentId, newCount) {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth() + 1;
-            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-
-            // StudentMonthlySlots 테이블에 데이터가 있으면 업데이트(upsert)
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
-                method: 'POST',
-                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({
-                    student_id: studentId,
-                    month: monthKey,
-                    total_slots: parseInt(newCount)
-                })
-            });
-
-            if (res.ok) {
-                alert("배정 횟수가 저장되었습니다.");
-                refreshDashboard();
-            } else {
-                alert("횟수 저장 실패. 테이블 설정을 확인하세요.");
-            }
         }
 
         async function addNewStudent() {
@@ -374,6 +352,29 @@
         function moveMonth(offset) {
             viewDate.setMonth(viewDate.getMonth() + offset);
             refreshDashboard();
+        }
+
+        async function updateTotalSlots(studentId, newCount) {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
+                method: 'POST',
+                headers: { ...headers, 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    month_key: monthKey,      // month -> month_key
+                    allowed_slots: parseInt(newCount) // total_slots -> allowed_slots
+                })
+            });
+
+            if (res.ok) {
+                refreshDashboard();
+            } else {
+                const err = await res.json();
+                console.error("저장 실패:", err);
+            }
         }
     </script>
 </body>
