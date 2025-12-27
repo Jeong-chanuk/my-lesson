@@ -290,6 +290,11 @@
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
 
+        // 1. 페이지 로드 시 실행
+        window.addEventListener('load', () => {
+            loadAdminDashboard();
+        });
+
         // 09:00 ~ 23:00 시간 배열 생성
         const timeSlots = Array.from({ length: 15 }, (_, i) => `${String(i + 9).padStart(2, '0')}:00`);
 
@@ -370,43 +375,42 @@
 
         // 관리자 대시보드 로드 및 표 렌더링
         async function loadAdminDashboard() {
-            // 1. 현재 화면에 표시된 연도와 월을 정확히 찾아냅니다.
-            const yearText = document.querySelector('div[style*="flex-direction: column"] > div:nth-child(1)').innerText.trim(); // "2025"
-            const monthText = document.querySelector('div[style*="flex-direction: column"] > div:nth-child(3)').innerText.trim().replace('월', ''); // "12"
-            const monthKey = `${yearText}-${monthText.padStart(2, '0')}`;
+            const calendarMonthText = document.getElementById('admin-current-month').innerText; // "2025년 12월"
+            const match = calendarMonthText.match(/(\d+)년 (\d+)월/);
+            if (!match) return;
 
-            // 2. 표가 들어갈 위치를 강제로 지정합니다. (이미지 하단의 '데이터를 불러오는 중...' 부분)
-            const containers = document.querySelectorAll('div');
-            let container = Array.from(containers).find(el => el.innerText.includes("데이터를 불러오는 중..."));
+            const year = match[1];
+            const month = match[2].padStart(2, '0');
+            currentMonthKey = `${year}-${month}`; // 전역 변수 업데이트
 
-            if (!container) return; // 위치를 못 찾으면 중단
+            const tableContainer = document.getElementById('student-management-container');
+            if (!tableContainer) return;
 
             try {
-                // 데이터 동시 로드
+                // 데이터 동시 로드 (Students, MonthlySlots, Reservations)
                 const [studentsRes, slotsRes, reservationsRes] = await Promise.all([
                     fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
-                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?date=gte.${monthKey}-01&date=lte.${monthKey}-31`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
+                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${currentMonthKey}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
+                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?date=gte.${currentMonthKey}-01&date=lte.${currentMonthKey}-31`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } })
                 ]);
 
                 const students = await studentsRes.json();
                 const slotsData = await slotsRes.json();
                 const reservations = await reservationsRes.json();
 
-                // 표 디자인 구성
+                // 관리자 표 생성
                 let html = `
-            <div style="overflow-x: auto; margin-top: 20px;">
-                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; font-size: 14px;">
-                    <thead style="background: #f8f9fa;">
-                        <tr>
-                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">이름</th>
-                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">전체</th>
-                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">사용</th>
-                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">잔여</th>
-                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">관리</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>학생 이름</th>
+                        <th>부여 횟수</th>
+                        <th>사용</th>
+                        <th>잔여</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
         `;
 
                 students.forEach(student => {
@@ -416,72 +420,43 @@
                     const remaining = allowed - used;
 
                     html += `
-                <tr style="border-bottom: 1px solid #eee; text-align: center;">
-                    <td style="padding: 10px;"><strong>${student.Name}</strong></td>
-                    <td style="padding: 10px;">
-                        <input type="number" id="input-allowed-${student.id}" value="${allowed}" style="width: 40px; text-align: center;">회
+                <tr>
+                    <td><strong>${student.Name}</strong></td>
+                    <td>
+                        <input type="number" id="input-allowed-${student.id}" value="${allowed}" class="slot-input"> 회
                     </td>
-                    <td style="padding: 10px; color: #007bff;">${used}</td>
-                    <td style="padding: 10px; font-weight: bold; color: ${remaining < 0 ? 'red' : 'black'}">${remaining}</td>
-                    <td style="padding: 10px;">
-                        <button onclick="updateMonthlySlot(${student.id})" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">저장</button>
+                    <td class="count-used">${used}회</td>
+                    <td class="count-remaining ${remaining < 0 ? 'warning' : ''}">${remaining}회</td>
+                    <td>
+                        <button onclick="updateMonthlySlot(${student.id})" class="btn-save">저장</button>
+                        <button onclick="deleteStudent(${student.id}, '${student.Name}')" class="btn-del">삭제</button>
                     </td>
                 </tr>
             `;
                 });
 
-                html += `</tbody></table></div>`;
-                container.innerHTML = html; // "데이터를 불러오는 중..." 글자를 표로 교체!
+                html += `</tbody></table>`;
+                tableContainer.innerHTML = html;
+
+                // 캘린더도 함께 업데이트 (기존 로직 유지)
+                allReservations = reservations;
+                renderAdminCalendar();
 
             } catch (err) {
-                console.error("실패:", err);
-                container.innerHTML = `<p style="color: red;">로딩 실패: ${err.message}</p>`;
+                console.error("대시보드 로드 실패:", err);
+                tableContainer.innerHTML = `<p style="color:red; text-align:center;">데이터 로드 실패: ${err.message}</p>`;
             }
         }
 
-        function renderStudentManagement(students, monthlySlots, currentMonthKey) {
-            const container = document.getElementById('student-list-container');
-            if (!container) return;
-
-            container.innerHTML = `<h3 style="margin-top:20px;">📅 ${currentMonthKey} 수강 횟수 설정</h3>`;
-
-            students.forEach(student => {
-                // [핵심] 이번 달 설정값이 있는지 찾습니다.
-                const slotConfig = monthlySlots.find(s => s.student_id === student.id);
-                const currentAllowed = slotConfig ? slotConfig.allowed_slots : 0;
-
-
-                const item = document.createElement('div');
-                item.className = 'student-item';
-
-                // 이미지(image_0a02a6.png)에서 확인된 컬럼명 'Name' 사용
-                item.innerHTML = `
-            <span><strong>${student.Name}</strong> (ID: ${student.id})</span>
-            <div>
-                <input type="number" class="slot-input" id="slot-${student.id}" value="${student.total_slots}">
-                <button class="update-btn" onclick="updateMonthlySlot(${student.id})">수정</button>
-            </div>
-        `;
-                container.appendChild(item);
-            });
-        }
-
-        // 이 함수는 '특정 월'의 데이터를 저장하거나 수정합니다.
+        // 3. 횟수 수정 함수
         async function updateMonthlySlot(studentId) {
-            console.log("1. 함수 진입 성공");
-            const valInput = document.getElementById(`slot-${studentId}`);
+            const valInput = document.getElementById(`input-allowed-${studentId}`);
+            if (!valInput) return;
 
-            if (!valInput) {
-                console.error("입력창을 찾을 수 없음:", `slot-${studentId}`);
-                return;
-            }
-
-            const newValue = valInput.value;
-            console.log("2. 입력값 확인:", newValue, "/ 현재 월:", currentMonthKey);
+            const newValue = parseInt(valInput.value);
 
             try {
-                console.log("3. fetch 요청 보냄...");
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?on_conflict=student_id,month_key`, {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
                     method: 'POST',
                     headers: {
                         'apikey': SUPABASE_KEY,
@@ -490,26 +465,31 @@
                         'Prefer': 'resolution=merge-duplicates'
                     },
                     body: JSON.stringify({
-                        student_id: Number(studentId),
+                        student_id: studentId,
                         month_key: currentMonthKey,
-                        allowed_slots: parseInt(newValue)
+                        allowed_slots: newValue
                     })
                 });
 
-                console.log("4. 응답 도착! 상태코드:", res.status);
-
                 if (res.ok) {
-                    alert("설정이 저장되었습니다.");
-                    location.reload(); // 확실하게 새로고침
+                    alert("수정되었습니다.");
+                    loadAdminDashboard();
                 } else {
-                    const errorData = await res.json();
-                    console.error("5. 저장 실패 사유:", errorData);
-                    alert("저장 실패: " + JSON.stringify(errorData));
+                    alert("저장 실패");
                 }
             } catch (err) {
-                console.error("6. 예외 발생:", err);
-                alert("에러 발생: " + err.message);
+                alert("에러 발생");
             }
+        }
+
+        // 4. 달 이동 함수 수정
+        function changeAdminMonth(offset) {
+            adminCurrentDate.setMonth(adminCurrentDate.getMonth() + offset);
+            // 달력 텍스트 업데이트 후 대시보드 리로드
+            const year = adminCurrentDate.getFullYear();
+            const month = adminCurrentDate.getMonth() + 1;
+            document.getElementById('admin-current-month').innerText = `${year}년 ${month}월`;
+            loadAdminDashboard();
         }
         function renderAdminCalendar() {
             const grid = document.getElementById('admin-calendar-grid');
