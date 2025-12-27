@@ -370,16 +370,19 @@
 
         // 관리자 대시보드 로드 및 표 렌더링
         async function loadAdminDashboard() {
-            // 1. 현재 선택된 연월 가져오기 (예: "2025-12")
-            const year = document.getElementById('current-year').innerText;
-            const month = document.getElementById('current-month').innerText.replace('월', '').padStart(2, '0');
-            const monthKey = `${year}-${month}`;
+            // 1. 현재 화면에 표시된 연도와 월을 정확히 찾아냅니다.
+            const yearText = document.querySelector('div[style*="flex-direction: column"] > div:nth-child(1)').innerText.trim(); // "2025"
+            const monthText = document.querySelector('div[style*="flex-direction: column"] > div:nth-child(3)').innerText.trim().replace('월', ''); // "12"
+            const monthKey = `${yearText}-${monthText.padStart(2, '0')}`;
 
-            const container = document.getElementById('student-management-container');
-            if (!container) return;
+            // 2. 표가 들어갈 위치를 강제로 지정합니다. (이미지 하단의 '데이터를 불러오는 중...' 부분)
+            const containers = document.querySelectorAll('div');
+            let container = Array.from(containers).find(el => el.innerText.includes("데이터를 불러오는 중..."));
+
+            if (!container) return; // 위치를 못 찾으면 중단
 
             try {
-                // 데이터 한꺼번에 가져오기
+                // 데이터 동시 로드
                 const [studentsRes, slotsRes, reservationsRes] = await Promise.all([
                     fetch(`${SUPABASE_URL}/rest/v1/Students?select=*`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
                     fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }),
@@ -390,19 +393,20 @@
                 const slotsData = await slotsRes.json();
                 const reservations = await reservationsRes.json();
 
-                // 테이블 생성
+                // 표 디자인 구성
                 let html = `
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>이름</th>
-                        <th>부여 횟수</th>
-                        <th>사용</th>
-                        <th>잔여</th>
-                        <th>작업</th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div style="overflow-x: auto; margin-top: 20px;">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; font-size: 14px;">
+                    <thead style="background: #f8f9fa;">
+                        <tr>
+                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">이름</th>
+                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">전체</th>
+                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">사용</th>
+                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">잔여</th>
+                            <th style="padding: 10px; border-bottom: 2px solid #dee2e6;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
                 students.forEach(student => {
@@ -412,26 +416,26 @@
                     const remaining = allowed - used;
 
                     html += `
-                <tr>
-                    <td><strong>${student.Name}</strong></td>
-                    <td>
-                        <input type="number" id="input-allowed-${student.id}" value="${allowed}" class="slot-input"> 회
+                <tr style="border-bottom: 1px solid #eee; text-align: center;">
+                    <td style="padding: 10px;"><strong>${student.Name}</strong></td>
+                    <td style="padding: 10px;">
+                        <input type="number" id="input-allowed-${student.id}" value="${allowed}" style="width: 40px; text-align: center;">회
                     </td>
-                    <td class="count-used">${used}회</td>
-                    <td class="count-remaining ${remaining < 0 ? 'warning' : ''}">${remaining}회</td>
-                    <td>
-                        <button onclick="updateMonthlySlot(${student.id})" class="btn-save">저장</button>
+                    <td style="padding: 10px; color: #007bff;">${used}</td>
+                    <td style="padding: 10px; font-weight: bold; color: ${remaining < 0 ? 'red' : 'black'}">${remaining}</td>
+                    <td style="padding: 10px;">
+                        <button onclick="updateMonthlySlot(${student.id})" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">저장</button>
                     </td>
                 </tr>
             `;
                 });
 
-                html += `</tbody></table>`;
-                container.innerHTML = html;
+                html += `</tbody></table></div>`;
+                container.innerHTML = html; // "데이터를 불러오는 중..." 글자를 표로 교체!
 
             } catch (err) {
-                console.error("대시보드 로드 실패:", err);
-                container.innerHTML = "<p>데이터를 불러오는 중 오류가 발생했습니다.</p>";
+                console.error("실패:", err);
+                container.innerHTML = `<p style="color: red;">로딩 실패: ${err.message}</p>`;
             }
         }
 
