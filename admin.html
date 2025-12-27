@@ -404,7 +404,7 @@
                         'Prefer': 'resolution=merge-duplicates'
                     },
                     body: JSON.stringify({
-                        student_id: studentId,
+                        student_id: Number(studentId),
                         month_key: currentMonthKey,
                         allowed_slots: parseInt(newValue)
                     })
