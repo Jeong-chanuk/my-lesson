@@ -251,30 +251,33 @@
             const year = viewDate.getFullYear();
             const month = viewDate.getMonth() + 1;
             const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+            // 해당 월의 마지막 날짜를 자동으로 계산합니다 (2월은 28일, 1월은 31일 등)
+            const lastDay = new Date(year, month, 0).getDate();
+            const startDate = `${monthKey}-01`;
+            const endDate = `${monthKey}-${lastDay}`;
+
             document.getElementById('current-month-label').innerText = `${year}년 ${month}월`;
-            // --- 2. 대시보드 (달력 + 학생목록) ---
+
             try {
                 const [allStdRes, slotRes, resRes, activeStdRes] = await Promise.all([
                     fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name,is_active`, { headers }),
                     fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers }),
-                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers }), // 쉼표 추가 필수!
+                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${startDate}&lesson_date=lte.${endDate}`, { headers }),
                     fetch(`${SUPABASE_URL}/rest/v1/Students?is_active=eq.true&select=id,Name`, { headers })
                 ]);
 
-                // 각각의 결과를 JSON으로 변환
-                const allStudents = (await allStdRes.json()) || [];     // 전체 학생
-                const monthlySlots = (await slotRes.json()) || [];     // 배정 횟수 데이터
-                const reservations = await resRes.json();     // 예약 데이터
-                const activeStudents = (await activeStdRes.json()) || []; // 활성 학생만
+                // 'let'으로 선언하거나 안전장치를 바로 붙여서 에러를 방지합니다.
+                const allStudents = (await allStdRes.json()) || [];
+                const monthlySlots = (await slotRes.json()) || [];
+                const rawReservations = await resRes.json();
+                const activeStudents = (await activeStdRes.json()) || [];
 
-                if (!Array.isArray(reservations)) {
-                    console.warn("예약 데이터가 없거나 형식이 잘못되었습니다.", reservations);
-                    reservations = [];
-                }
+                // 데이터가 배열이 아니면(에러 응답 등) 빈 배열로 처리
+                const reservations = Array.isArray(rawReservations) ? rawReservations : [];
 
-                // 화면에는 활성 학생(activeStudents)만 그려줍니다.
                 renderStudentTable(activeStudents, monthlySlots, reservations);
-                renderInactiveList(allStudents.filter(s => !s.is_active === false));
+                renderInactiveList(allStudents.filter(s => s.is_active === false));
                 renderCalendar(reservations, activeStudents);
             } catch (e) {
                 console.error("데이터 갱신 중 오류:", e);
