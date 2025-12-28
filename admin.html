@@ -238,29 +238,25 @@
         }
 
         // --- 2. 대시보드 (달력 + 학생목록) ---
-        async function refreshDashboard() {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth() + 1;
-            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-            document.getElementById('current-month-label').innerText = `${year}년 ${month}월`;
+        try {
+            const [allStdRes, slotRes, resRes, activeStdRes] = await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, { headers }),
+                fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers }),
+                fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers }), // 쉼표 추가 필수!
+                fetch(`${SUPABASE_URL}/rest/v1/Students?is_active=eq.true&select=id,Name`, { headers })
+            ]);
 
-            try {
-                const [stdRes, slotRes, resRes] = await Promise.all([
-                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, { headers }),
-                    fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers }),
-                    fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers })
-                ]);
+            // 각각의 결과를 JSON으로 변환
+            const allStudents = await allStdRes.json();     // 전체 학생
+            const monthlySlots = await slotRes.json();     // 배정 횟수 데이터
+            const reservations = await resRes.json();     // 예약 데이터
+            const activeStudents = await activeStdRes.json(); // 활성 학생만
 
-                const students = (await stdRes.json()) || [];
-                const monthlySlots = (await slotRes.json()) || [];
-                const reservations = (await resRes.json()) || [];
-
-                renderStudentTable(students, monthlySlots, reservations);
-                // ★ 여기서 students를 두 번째 인자로 반드시 넘겨줘야 합니다!
-                renderCalendar(reservations, students);
-            } catch (e) {
-                console.error("데이터 갱신 중 오류:", e);
-            }
+            // 화면에는 활성 학생(activeStudents)만 그려줍니다.
+            renderStudentTable(activeStudents, monthlySlots, reservations);
+            renderCalendar(reservations, activeStudents);
+        } catch (e) {
+            console.error("데이터 갱신 중 오류:", e);
         }
 
         function renderStudentTable(students, monthlySlots, reservations) {
@@ -357,10 +353,23 @@
             refreshDashboard();
         }
 
-        async function delStudent(id) {
-            if (!confirm("학생을 삭제할까요?")) return;
-            await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${id}`, { method: 'DELETE', headers });
-            refreshDashboard();
+        async function deactivateStudent(id) {
+            if (!confirm("이 학생을 '퇴소' 처리하시겠습니까? 기록은 보존되며 목록에서만 숨겨집니다.")) return;
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({ is_active: false }) // 지우지 않고 상태만 변경
+                });
+
+                if (res.ok) {
+                    alert("퇴소 처리가 완료되었습니다.");
+                    refreshDashboard();
+                }
+            } catch (e) {
+                console.error("처리 중 오류:", e);
+            }
         }
 
         function moveMonth(offset) {
