@@ -255,7 +255,7 @@
             // --- 2. 대시보드 (달력 + 학생목록) ---
             try {
                 const [allStdRes, slotRes, resRes, activeStdRes] = await Promise.all([
-                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name`, { headers }),
+                    fetch(`${SUPABASE_URL}/rest/v1/Students?select=id,Name,is_active`, { headers }),
                     fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?month_key=eq.${monthKey}`, { headers }),
                     fetch(`${SUPABASE_URL}/rest/v1/Reservations?lesson_date=gte.${monthKey}-01&lesson_date=lte.${monthKey}-31`, { headers }), // 쉼표 추가 필수!
                     fetch(`${SUPABASE_URL}/rest/v1/Students?is_active=eq.true&select=id,Name`, { headers })
@@ -274,6 +274,7 @@
             } catch (e) {
                 console.error("데이터 갱신 중 오류:", e);
             }
+        }
 
             function renderStudentTable(students, monthlySlots, reservations) {
                 let html = `
