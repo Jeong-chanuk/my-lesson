@@ -187,6 +187,16 @@
         </div>
     </div>
 
+    <div id="student-list-container"></div>
+
+    <hr style="margin: 30px 0;">
+
+    <div class="inactive-section" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
+        <h3>퇴소생 및 휴원생 관리</h3>
+        <div id="inactive-list-container">
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://stjmbuhxmdnogmzmeqmt.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_GJe263qFZFStFSXh2oT3AA_D2wUEqmD';
@@ -259,6 +269,7 @@
 
                 // 화면에는 활성 학생(activeStudents)만 그려줍니다.
                 renderStudentTable(activeStudents, monthlySlots, reservations);
+                renderInactiveList(allStudents.filter(s => !s.is_active));
                 renderCalendar(reservations, activeStudents);
             } catch (e) {
                 console.error("데이터 갱신 중 오류:", e);
@@ -299,7 +310,7 @@
                     <span style="color:${remaining < 0 ? 'red' : 'black'}">${remaining}</span>
                 </td>
                 <td>
-                    <button onclick="delStudent(${s.id})" style="background:red; color:white; border:none; padding:4px 8px; border-radius:4px;">삭제</button>
+                    <button onclick="updateStudentStatus(${s.id}, false)" style="background:orange; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">퇴소</button>
                 </td>
             </tr>`;
                 });
@@ -422,6 +433,40 @@
                 } else {
                     const err = await res.json();
                     console.error("저장 실패:", err);
+                }
+            }
+            // 비활성 학생 목록 그리기
+            function renderInactiveList(inactiveStudents) {
+                const container = document.getElementById('inactive-list-container');
+                if (inactiveStudents.length === 0) {
+                    container.innerHTML = "<p style='color:gray;'>퇴소 처리된 학생이 없습니다.</p>";
+                    return;
+                }
+
+                let html = `<ul style="list-style:none; padding:0;">`;
+                inactiveStudents.forEach(s => {
+                    html += `
+            <li style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border:1px solid #ddd;">
+                <span><strong>${s.Name}</strong> (퇴소 상태)</span>
+                <button onclick="updateStudentStatus(${s.id}, true)" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">복구하기</button>
+            </li>`;
+                });
+                container.innerHTML = html + `</ul>`;
+            }
+
+            // 상태 변경 공통 함수 (복구/퇴소 겸용)
+            async function updateStudentStatus(id, status) {
+                const msg = status ? "복구하시겠습니까?" : "퇴소 처리하시겠습니까? 기록은 보존됩니다.";
+                if (!confirm(msg)) return;
+
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({ is_active: status })
+                });
+
+                if (res.ok) {
+                    refreshDashboard();
                 }
             }
         }
