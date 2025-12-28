@@ -369,18 +369,21 @@
                 refreshDashboard();
             }
 
-            async function deactivateStudent(id) {
-                if (!confirm("이 학생을 '퇴소' 처리하시겠습니까? 기록은 보존되며 목록에서만 숨겨집니다.")) return;
+            // 이름을 버튼이 부르는 'updateStudentStatus'로 바꿉니다.
+            async function updateStudentStatus(id, status) {
+                // status가 false로 들어오면 퇴소 처리를 진행합니다.
+                const msg = status ? "복구하시겠습니까?" : "이 학생을 '퇴소' 처리하시겠습니까? 기록은 보존되며 목록에서만 숨겨집니다.";
+                if (!confirm(msg)) return;
 
                 try {
                     const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${id}`, {
                         method: 'PATCH',
                         headers: headers,
-                        body: JSON.stringify({ is_active: false }) // 지우지 않고 상태만 변경
+                        body: JSON.stringify({ is_active: status }) // 매개변수로 받은 status(false) 적용
                     });
 
                     if (res.ok) {
-                        alert("퇴소 처리가 완료되었습니다.");
+                        alert(status ? "복구되었습니다." : "퇴소 처리가 완료되었습니다.");
                         refreshDashboard();
                     }
                 } catch (e) {
