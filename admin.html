@@ -262,22 +262,27 @@
                 ]);
 
                 // 각각의 결과를 JSON으로 변환
-                const allStudents = await allStdRes.json();     // 전체 학생
-                const monthlySlots = await slotRes.json();     // 배정 횟수 데이터
+                const allStudents = (await allStdRes.json()) || [];     // 전체 학생
+                const monthlySlots = (await slotRes.json()) || [];     // 배정 횟수 데이터
                 const reservations = await resRes.json();     // 예약 데이터
-                const activeStudents = await activeStdRes.json(); // 활성 학생만
+                const activeStudents = (await activeStdRes.json()) || []; // 활성 학생만
+
+                if (!Array.isArray(reservations)) {
+                    console.warn("예약 데이터가 없거나 형식이 잘못되었습니다.", reservations);
+                    reservations = [];
+                }
 
                 // 화면에는 활성 학생(activeStudents)만 그려줍니다.
                 renderStudentTable(activeStudents, monthlySlots, reservations);
-                renderInactiveList(allStudents.filter(s => !s.is_active));
+                renderInactiveList(allStudents.filter(s => !s.is_active === false));
                 renderCalendar(reservations, activeStudents);
             } catch (e) {
                 console.error("데이터 갱신 중 오류:", e);
             }
         }
 
-            function renderStudentTable(students, monthlySlots, reservations) {
-                let html = `
+        function renderStudentTable(students, monthlySlots, reservations) {
+            let html = `
         <table class="admin-table">
             <thead>
                 <tr>
@@ -289,16 +294,16 @@
             </thead>
             <tbody>`;
 
-                students.forEach(s => {
-                    // total_slots -> allowed_slots 로 수정
-                    const slotData = monthlySlots.find(m => m.student_id === s.id);
-                    const assigned = slotData ? slotData.allowed_slots : 0;
+            students.forEach(s => {
+                // total_slots -> allowed_slots 로 수정
+                const slotData = monthlySlots.find(m => m.student_id === s.id);
+                const assigned = slotData ? slotData.allowed_slots : 0;
 
-                    // 예약 데이터에서 학생 ID와 일치하는 개수 계산
-                    const used = reservations.filter(r => Number(r.student_id) === s.id).length;
-                    const remaining = assigned - used;
+                // 예약 데이터에서 학생 ID와 일치하는 개수 계산
+                const used = reservations.filter(r => Number(r.student_id) === s.id).length;
+                const remaining = assigned - used;
 
-                    html += `
+                html += `
             <tr>
                 <td><strong>${s.Name}</strong></td>
                 <td>
@@ -314,158 +319,158 @@
                     <button onclick="updateStudentStatus(${s.id}, false)" style="background:orange; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">퇴소</button>
                 </td>
             </tr>`;
-                });
-                document.getElementById('student-list-container').innerHTML = html + `</tbody></table>`;
-            }
+            });
+            document.getElementById('student-list-container').innerHTML = html + `</tbody></table>`;
+        }
 
-            async function addNewStudent() {
-                const name = document.getElementById('new-name').value;
-                if (!name) return;
-                // total_slots를 코드에서 완전히 제거하여 400 에러 방지
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/Students`, {
-                    method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({ Name: name })
-                });
-                if (res.ok) { document.getElementById('new-name').value = ''; refreshDashboard(); }
-            }
+        async function addNewStudent() {
+            const name = document.getElementById('new-name').value;
+            if (!name) return;
+            // total_slots를 코드에서 완전히 제거하여 400 에러 방지
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/Students`, {
+                method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ Name: name })
+            });
+            if (res.ok) { document.getElementById('new-name').value = ''; refreshDashboard(); }
+        }
 
-            function renderCalendar(reservations, students) {
-                const grid = document.getElementById('calendar-grid');
-                grid.innerHTML = '';
+        function renderCalendar(reservations, students) {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
 
-                // 요일 헤더
-                ['일', '월', '화', '수', '목', '금', '토'].forEach(d => {
-                    grid.innerHTML += `<div class="cal-header">${d}</div>`;
-                });
+            // 요일 헤더
+            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => {
+                grid.innerHTML += `<div class="cal-header">${d}</div>`;
+            });
 
-                const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-                const lastDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+            const lastDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
-                for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="cal-day"></div>`;
+            for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div class="cal-day"></div>`;
 
-                // 학생 데이터가 없을 경우를 대비한 안전장치
-                const safeStudents = Array.isArray(students) ? students : [];
+            // 학생 데이터가 없을 경우를 대비한 안전장치
+            const safeStudents = Array.isArray(students) ? students : [];
 
-                for (let d = 1; d <= lastDate; d++) {
-                    const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    const dayRes = Array.isArray(reservations) ? reservations.filter(r => r.lesson_date === dateStr) : [];
+            for (let d = 1; d <= lastDate; d++) {
+                const dateStr = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayRes = Array.isArray(reservations) ? reservations.filter(r => r.lesson_date === dateStr) : [];
 
-                    // resHtml 변수 중복 에러 방지
-                    const calendarItemHtml = dayRes.map(r => {
-                        // ID로 이름 찾기
-                        const student = safeStudents.find(s => s.id === Number(r.student_id));
-                        const nameToShow = student ? student.Name : r.student_id;
+                // resHtml 변수 중복 에러 방지
+                const calendarItemHtml = dayRes.map(r => {
+                    // ID로 이름 찾기
+                    const student = safeStudents.find(s => s.id === Number(r.student_id));
+                    const nameToShow = student ? student.Name : r.student_id;
 
-                        return `<div class="res-item" onclick="deleteRes('${r.id}')">
+                    return `<div class="res-item" onclick="deleteRes('${r.id}')">
                         ${r.lesson_time} ${nameToShow}
                     </div>`;
-                    }).join('');
+                }).join('');
 
-                    grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${calendarItemHtml}</div>`;
-                }
+                grid.innerHTML += `<div class="cal-day"><strong>${d}</strong>${calendarItemHtml}</div>`;
             }
-            async function deleteRes(id) {
-                if (!confirm("예약을 삭제할까요?")) return;
-                await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${id}`, { method: 'DELETE', headers });
-                refreshDashboard();
-            }
+        }
+        async function deleteRes(id) {
+            if (!confirm("예약을 삭제할까요?")) return;
+            await fetch(`${SUPABASE_URL}/rest/v1/Reservations?id=eq.${id}`, { method: 'DELETE', headers });
+            refreshDashboard();
+        }
 
-            // 이름을 버튼이 부르는 'updateStudentStatus'로 바꿉니다.
-            // 상태 변경 공통 함수 (복구/퇴소 겸용)
-            // 학생의 활성화 상태(is_active)를 업데이트하는 함수
-            async function updateStudentStatus(studentId, newStatus) {
-                const confirmMsg = newStatus
-                    ? "이 학생을 다시 복구하시겠습니까?"
-                    : "이 학생을 퇴소 처리하시겠습니까? (기록은 보존됩니다)";
+        // 이름을 버튼이 부르는 'updateStudentStatus'로 바꿉니다.
+        // 상태 변경 공통 함수 (복구/퇴소 겸용)
+        // 학생의 활성화 상태(is_active)를 업데이트하는 함수
+        async function updateStudentStatus(studentId, newStatus) {
+            const confirmMsg = newStatus
+                ? "이 학생을 다시 복구하시겠습니까?"
+                : "이 학생을 퇴소 처리하시겠습니까? (기록은 보존됩니다)";
 
-                if (!confirm(confirmMsg)) return;
+            if (!confirm(confirmMsg)) return;
 
-                try {
-                    const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${studentId}`, {
-                        method: 'PATCH', // 데이터를 수정할 때는 PATCH를 사용합니다.
-                        headers: headers,
-                        body: JSON.stringify({
-                            is_active: newStatus // true면 복구, false면 퇴소
-                        })
-                    });
-
-                    if (res.ok) {
-                        alert(newStatus ? "복구되었습니다." : "퇴소 처리되었습니다.");
-                        refreshDashboard(); // 화면 갱신
-                    } else {
-                        const err = await res.json();
-                        console.error("상태 변경 실패:", err);
-                    }
-                } catch (e) {
-                    console.error("네트워크 오류:", e);
-                }
-            }
-
-            function moveMonth(offset) {
-                viewDate.setMonth(viewDate.getMonth() + offset);
-                refreshDashboard();
-            }
-
-            async function updateTotalSlots(studentId, newCount) {
-                const year = viewDate.getFullYear();
-                const month = viewDate.getMonth() + 1;
-                const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-
-                // 1. 먼저 해당 데이터가 있는지 확인 (조회)
-                const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?student_id=eq.${studentId}&month_key=eq.${monthKey}`, {
-                    headers: headers
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${studentId}`, {
+                    method: 'PATCH', // 데이터를 수정할 때는 PATCH를 사용합니다.
+                    headers: headers,
+                    body: JSON.stringify({
+                        is_active: newStatus // true면 복구, false면 퇴소
+                    })
                 });
-                const existingData = await checkRes.json();
-
-                let res;
-                if (existingData && existingData.length > 0) {
-                    // 2. 데이터가 이미 있다면? -> PATCH (수정) 요청을 보냄
-                    res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?student_id=eq.${studentId}&month_key=eq.${monthKey}`, {
-                        method: 'PATCH',
-                        headers: headers,
-                        body: JSON.stringify({
-                            allowed_slots: parseInt(newCount)
-                        })
-                    });
-                } else {
-                    // 3. 데이터가 없다면? -> POST (새로 추가) 요청을 보냄
-                    res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify({
-                            student_id: studentId,
-                            month_key: monthKey,
-                            allowed_slots: parseInt(newCount)
-                        })
-                    });
-                }
 
                 if (res.ok) {
-                    console.log("횟수 업데이트 성공");
-                    refreshDashboard(); // 화면 수치 갱신
+                    alert(newStatus ? "복구되었습니다." : "퇴소 처리되었습니다.");
+                    refreshDashboard(); // 화면 갱신
                 } else {
                     const err = await res.json();
-                    console.error("저장 실패:", err);
+                    console.error("상태 변경 실패:", err);
                 }
+            } catch (e) {
+                console.error("네트워크 오류:", e);
             }
-            // 비활성 학생 목록 그리기
-            function renderInactiveList(inactiveStudents) {
-                const container = document.getElementById('inactive-list-container');
-                if (inactiveStudents.length === 0) {
-                    container.innerHTML = "<p style='color:gray;'>퇴소 처리된 학생이 없습니다.</p>";
-                    return;
-                }
+        }
 
-                let html = `<ul style="list-style:none; padding:0;">`;
-                inactiveStudents.forEach(s => {
-                    html += `
+        function moveMonth(offset) {
+            viewDate.setMonth(viewDate.getMonth() + offset);
+            refreshDashboard();
+        }
+
+        async function updateTotalSlots(studentId, newCount) {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+            // 1. 먼저 해당 데이터가 있는지 확인 (조회)
+            const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?student_id=eq.${studentId}&month_key=eq.${monthKey}`, {
+                headers: headers
+            });
+            const existingData = await checkRes.json();
+
+            let res;
+            if (existingData && existingData.length > 0) {
+                // 2. 데이터가 이미 있다면? -> PATCH (수정) 요청을 보냄
+                res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots?student_id=eq.${studentId}&month_key=eq.${monthKey}`, {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        allowed_slots: parseInt(newCount)
+                    })
+                });
+            } else {
+                // 3. 데이터가 없다면? -> POST (새로 추가) 요청을 보냄
+                res = await fetch(`${SUPABASE_URL}/rest/v1/StudentMonthlySlots`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        month_key: monthKey,
+                        allowed_slots: parseInt(newCount)
+                    })
+                });
+            }
+
+            if (res.ok) {
+                console.log("횟수 업데이트 성공");
+                refreshDashboard(); // 화면 수치 갱신
+            } else {
+                const err = await res.json();
+                console.error("저장 실패:", err);
+            }
+        }
+        // 비활성 학생 목록 그리기
+        function renderInactiveList(inactiveStudents) {
+            const container = document.getElementById('inactive-list-container');
+            if (inactiveStudents.length === 0) {
+                container.innerHTML = "<p style='color:gray;'>퇴소 처리된 학생이 없습니다.</p>";
+                return;
+            }
+
+            let html = `<ul style="list-style:none; padding:0;">`;
+            inactiveStudents.forEach(s => {
+                html += `
             <li style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border:1px solid #ddd;">
                 <span><strong>${s.Name}</strong> (퇴소 상태)</span>
                 <button onclick="updateStudentStatus(${s.id}, true)" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">복구하기</button>
             </li>`;
-                });
-                container.innerHTML = html + `</ul>`;
-            }
+            });
+            container.innerHTML = html + `</ul>`;
+        }
 
     </script>
 </body>
