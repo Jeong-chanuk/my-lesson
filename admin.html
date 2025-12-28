@@ -370,24 +370,33 @@
             }
 
             // 이름을 버튼이 부르는 'updateStudentStatus'로 바꿉니다.
-            async function updateStudentStatus(id, status) {
-                // status가 false로 들어오면 퇴소 처리를 진행합니다.
-                const msg = status ? "복구하시겠습니까?" : "이 학생을 '퇴소' 처리하시겠습니까? 기록은 보존되며 목록에서만 숨겨집니다.";
-                if (!confirm(msg)) return;
+            // 상태 변경 공통 함수 (복구/퇴소 겸용)
+            // 학생의 활성화 상태(is_active)를 업데이트하는 함수
+            async function updateStudentStatus(studentId, newStatus) {
+                const confirmMsg = newStatus
+                    ? "이 학생을 다시 복구하시겠습니까?"
+                    : "이 학생을 퇴소 처리하시겠습니까? (기록은 보존됩니다)";
+
+                if (!confirm(confirmMsg)) return;
 
                 try {
-                    const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${id}`, {
-                        method: 'PATCH',
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${studentId}`, {
+                        method: 'PATCH', // 데이터를 수정할 때는 PATCH를 사용합니다.
                         headers: headers,
-                        body: JSON.stringify({ is_active: status }) // 매개변수로 받은 status(false) 적용
+                        body: JSON.stringify({
+                            is_active: newStatus // true면 복구, false면 퇴소
+                        })
                     });
 
                     if (res.ok) {
-                        alert(status ? "복구되었습니다." : "퇴소 처리가 완료되었습니다.");
-                        refreshDashboard();
+                        alert(newStatus ? "복구되었습니다." : "퇴소 처리되었습니다.");
+                        refreshDashboard(); // 화면 갱신
+                    } else {
+                        const err = await res.json();
+                        console.error("상태 변경 실패:", err);
                     }
                 } catch (e) {
-                    console.error("처리 중 오류:", e);
+                    console.error("네트워크 오류:", e);
                 }
             }
 
@@ -457,35 +466,7 @@
                 container.innerHTML = html + `</ul>`;
             }
 
-            // 상태 변경 공통 함수 (복구/퇴소 겸용)
-            // 학생의 활성화 상태(is_active)를 업데이트하는 함수
-            async function updateStudentStatus(studentId, newStatus) {
-                const confirmMsg = newStatus
-                    ? "이 학생을 다시 복구하시겠습니까?"
-                    : "이 학생을 퇴소 처리하시겠습니까? (기록은 보존됩니다)";
 
-                if (!confirm(confirmMsg)) return;
-
-                try {
-                    const res = await fetch(`${SUPABASE_URL}/rest/v1/Students?id=eq.${studentId}`, {
-                        method: 'PATCH', // 데이터를 수정할 때는 PATCH를 사용합니다.
-                        headers: headers,
-                        body: JSON.stringify({
-                            is_active: newStatus // true면 복구, false면 퇴소
-                        })
-                    });
-
-                    if (res.ok) {
-                        alert(newStatus ? "복구되었습니다." : "퇴소 처리되었습니다.");
-                        refreshDashboard(); // 화면 갱신
-                    } else {
-                        const err = await res.json();
-                        console.error("상태 변경 실패:", err);
-                    }
-                } catch (e) {
-                    console.error("네트워크 오류:", e);
-                }
-            }
         }
     </script>
 </body>
